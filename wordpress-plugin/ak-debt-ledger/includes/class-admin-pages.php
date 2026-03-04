@@ -266,50 +266,118 @@ class AK_Debt_Ledger_Admin_Pages {
             <h1><?php echo $is_edit ? __('Edit Debt', 'ak-debt-ledger') : __('Add New Debt', 'ak-debt-ledger'); ?></h1>
             
             <div class="ak-form-container">
+                <div class="ak-main-question">
+                    <h2 class="ak-big-question"><?php _e('Who owes you money?', 'ak-debt-ledger'); ?></h2>
+                    <p><?php _e('Fill in the details below to track the debt and send payment reminders.', 'ak-debt-ledger'); ?></p>
+                </div>
+                
                 <form id="ak-debt-form" method="post">
                     <?php wp_nonce_field('ak_debt_ledger_save', 'ak_debt_nonce'); ?>
                     <input type="hidden" name="entry_id" value="<?php echo $is_edit ? esc_attr($entry->id) : ''; ?>">
                     
-                    <div class="ak-form-section">
-                        <h2><?php _e('Customer Information', 'ak-debt-ledger'); ?></h2>
+                    <div class="ak-form-section ak-creditor-section">
+                        <h2><?php _e('YOUR Details (Creditor - the one owed money)', 'ak-debt-ledger'); ?></h2>
+                        <p class="description"><?php _e('This is you or your business name.', 'ak-debt-ledger'); ?></p>
+                        
+                        <div class="ak-form-row ak-form-row-half">
+                            <div>
+                                <label for="creditor_name"><?php _e('Your Name / Business Name', 'ak-debt-ledger'); ?> *</label>
+                                <input type="text" name="creditor_name" id="creditor_name" required
+                                       value="<?php echo $is_edit && isset($entry->creditor_name) ? esc_attr($entry->creditor_name) : esc_attr(get_bloginfo('name')); ?>">
+                            </div>
+                            <div>
+                                <label for="creditor_reference"><?php _e('Your Reference No. (optional)', 'ak-debt-ledger'); ?></label>
+                                <input type="text" name="creditor_reference" id="creditor_reference"
+                                       value="<?php echo $is_edit && isset($entry->creditor_reference) ? esc_attr($entry->creditor_reference) : ''; ?>"
+                                       placeholder="<?php _e('e.g. INV-001', 'ak-debt-ledger'); ?>">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ak-form-section ak-debtor-section">
+                        <h2><?php _e('DEBTOR Details (Person who owes YOU money)', 'ak-debt-ledger'); ?></h2>
+                        
+                        <div class="ak-form-row">
+                            <label for="num_debtors"><?php _e('How many people owe this debt?', 'ak-debt-ledger'); ?></label>
+                            <select name="num_debtors" id="num_debtors">
+                                <option value="1" selected><?php _e('1 Person', 'ak-debt-ledger'); ?></option>
+                                <option value="2"><?php _e('2 People (Joint Debt)', 'ak-debt-ledger'); ?></option>
+                                <option value="3"><?php _e('3 People (Joint Debt)', 'ak-debt-ledger'); ?></option>
+                            </select>
+                        </div>
                         
                         <?php if ($amelia_active) : ?>
                         <div class="ak-form-row">
                             <label for="ak-customer-search"><?php _e('Search Amelia Customer', 'ak-debt-ledger'); ?></label>
                             <input type="text" id="ak-customer-search" 
-                                   placeholder="<?php _e('Type to search customers...', 'ak-debt-ledger'); ?>">
+                                   placeholder="<?php _e('Type name, email or phone to search...', 'ak-debt-ledger'); ?>">
                             <div id="ak-customer-results" class="ak-search-results"></div>
-                        </div>
-                        <?php else : ?>
-                        <div class="notice notice-warning">
-                            <p><?php _e('Amelia plugin not detected. Enter customer details manually.', 'ak-debt-ledger'); ?></p>
                         </div>
                         <?php endif; ?>
                         
                         <input type="hidden" name="amelia_customer_id" id="amelia_customer_id" 
                                value="<?php echo $is_edit ? esc_attr($entry->amelia_customer_id) : ''; ?>">
                         
-                        <div class="ak-form-row">
-                            <label for="customer_name"><?php _e('Customer Name', 'ak-debt-ledger'); ?> *</label>
-                            <input type="text" name="customer_name" id="customer_name" required
-                                   value="<?php echo $is_edit ? esc_attr($entry->customer_name) : ''; ?>">
-                        </div>
-                        
-                        <div class="ak-form-row ak-form-row-half">
-                            <div>
-                                <label for="customer_phone"><?php _e('Phone Number', 'ak-debt-ledger'); ?></label>
-                                <input type="tel" name="customer_phone" id="customer_phone"
-                                       value="<?php echo $is_edit ? esc_attr($entry->customer_phone) : ''; ?>">
+                        <!-- Debtor 1 (Primary) -->
+                        <div class="ak-debtor-fields" id="debtor-1-fields">
+                            <h4><?php _e('Debtor 1 (Primary Contact)', 'ak-debt-ledger'); ?></h4>
+                            <div class="ak-form-row ak-form-row-half">
+                                <div>
+                                    <label for="customer_name"><?php _e('Full Name', 'ak-debt-ledger'); ?> *</label>
+                                    <input type="text" name="customer_name" id="customer_name" required
+                                           value="<?php echo $is_edit ? esc_attr($entry->customer_name) : ''; ?>"
+                                           placeholder="<?php _e('e.g. John Smith', 'ak-debt-ledger'); ?>">
+                                </div>
+                                <div>
+                                    <label for="customer_phone"><?php _e('Phone Number', 'ak-debt-ledger'); ?> *</label>
+                                    <input type="tel" name="customer_phone" id="customer_phone"
+                                           value="<?php echo $is_edit ? esc_attr($entry->customer_phone) : ''; ?>"
+                                           placeholder="<?php _e('e.g. 07700 900000', 'ak-debt-ledger'); ?>">
+                                </div>
                             </div>
-                            <div>
+                            <div class="ak-form-row">
                                 <label for="customer_email"><?php _e('Email Address', 'ak-debt-ledger'); ?></label>
                                 <input type="email" name="customer_email" id="customer_email"
                                        value="<?php echo $is_edit ? esc_attr($entry->customer_email) : ''; ?>">
                             </div>
                         </div>
                         
+                        <!-- Debtor 2 (Hidden by default) -->
+                        <div class="ak-debtor-fields ak-debtor-extra" id="debtor-2-fields" style="display:none;">
+                            <h4><?php _e('Debtor 2', 'ak-debt-ledger'); ?></h4>
+                            <div class="ak-form-row ak-form-row-half">
+                                <div>
+                                    <label for="debtor2_name"><?php _e('Full Name', 'ak-debt-ledger'); ?></label>
+                                    <input type="text" name="debtor2_name" id="debtor2_name"
+                                           value="<?php echo $is_edit && isset($entry->debtor2_name) ? esc_attr($entry->debtor2_name) : ''; ?>">
+                                </div>
+                                <div>
+                                    <label for="debtor2_phone"><?php _e('Phone Number', 'ak-debt-ledger'); ?></label>
+                                    <input type="tel" name="debtor2_phone" id="debtor2_phone"
+                                           value="<?php echo $is_edit && isset($entry->debtor2_phone) ? esc_attr($entry->debtor2_phone) : ''; ?>">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Debtor 3 (Hidden by default) -->
+                        <div class="ak-debtor-fields ak-debtor-extra" id="debtor-3-fields" style="display:none;">
+                            <h4><?php _e('Debtor 3', 'ak-debt-ledger'); ?></h4>
+                            <div class="ak-form-row ak-form-row-half">
+                                <div>
+                                    <label for="debtor3_name"><?php _e('Full Name', 'ak-debt-ledger'); ?></label>
+                                    <input type="text" name="debtor3_name" id="debtor3_name"
+                                           value="<?php echo $is_edit && isset($entry->debtor3_name) ? esc_attr($entry->debtor3_name) : ''; ?>">
+                                </div>
+                                <div>
+                                    <label for="debtor3_phone"><?php _e('Phone Number', 'ak-debt-ledger'); ?></label>
+                                    <input type="tel" name="debtor3_phone" id="debtor3_phone"
+                                           value="<?php echo $is_edit && isset($entry->debtor3_phone) ? esc_attr($entry->debtor3_phone) : ''; ?>">
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="ak-form-row">
-                            <label for="customer_address"><?php _e('Address', 'ak-debt-ledger'); ?></label>
+                            <label for="customer_address"><?php _e('Address (optional)', 'ak-debt-ledger'); ?></label>
                             <textarea name="customer_address" id="customer_address" rows="2"><?php echo $is_edit ? esc_textarea($entry->customer_address) : ''; ?></textarea>
                         </div>
                     </div>

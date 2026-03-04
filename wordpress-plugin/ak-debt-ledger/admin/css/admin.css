@@ -4,6 +4,48 @@
     max-width: 1400px;
 }
 
+/* Main Question Header */
+.ak-main-question {
+    background: linear-gradient(135deg, #0073aa 0%, #005a87 100%);
+    color: white;
+    padding: 25px 30px;
+    margin: -10px -20px 20px -20px;
+    border-radius: 0;
+}
+
+.ak-main-question .ak-big-question {
+    margin: 0 0 5px 0;
+    font-size: 28px;
+    color: white;
+}
+
+.ak-main-question p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 15px;
+}
+
+/* Debtor Fields */
+.ak-debtor-fields {
+    background: #f9f9f9;
+    padding: 15px;
+    margin: 15px 0;
+    border-left: 4px solid #0073aa;
+}
+
+.ak-debtor-fields h4 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.ak-debtor-extra {
+    border-left-color: #666;
+}
+
+.ak-debtor-extra h4 {
+    color: #666;
+}
+
 /* Status Badges */
 .status-badge {
     display: inline-block;

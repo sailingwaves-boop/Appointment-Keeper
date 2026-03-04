@@ -21,11 +21,18 @@ class AK_Debt_Ledger_Database {
         $ledger_table = $wpdb->prefix . 'ak_debt_ledger';
         $sql_ledger = "CREATE TABLE $ledger_table (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            creditor_name varchar(255) DEFAULT NULL,
+            creditor_reference varchar(255) DEFAULT NULL,
             amelia_customer_id bigint(20) UNSIGNED DEFAULT NULL,
             customer_name varchar(255) NOT NULL,
             customer_phone varchar(50) DEFAULT NULL,
             customer_email varchar(255) DEFAULT NULL,
             customer_address text DEFAULT NULL,
+            debtor2_name varchar(255) DEFAULT NULL,
+            debtor2_phone varchar(50) DEFAULT NULL,
+            debtor3_name varchar(255) DEFAULT NULL,
+            debtor3_phone varchar(50) DEFAULT NULL,
+            num_debtors int(1) DEFAULT 1,
             original_amount decimal(10,2) NOT NULL,
             current_balance decimal(10,2) NOT NULL,
             currency varchar(10) DEFAULT 'GBP',

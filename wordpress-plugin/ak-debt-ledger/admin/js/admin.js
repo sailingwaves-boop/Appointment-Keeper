@@ -5,6 +5,22 @@
 (function($) {
     'use strict';
 
+    // Number of debtors dropdown - show/hide extra debtor fields
+    $('#num_debtors').on('change', function() {
+        var num = parseInt($(this).val());
+        
+        // Hide all extra debtor fields first
+        $('.ak-debtor-extra').hide();
+        
+        // Show based on selection
+        if (num >= 2) {
+            $('#debtor-2-fields').show();
+        }
+        if (num >= 3) {
+            $('#debtor-3-fields').show();
+        }
+    });
+
     // Customer Search
     var searchTimeout;
     $('#ak-customer-search').on('input', function() {
@@ -101,11 +117,18 @@
             action: 'ak_save_debt',
             nonce: akDebtLedger.nonce,
             entry_id: $form.find('[name="entry_id"]').val(),
+            creditor_name: $form.find('[name="creditor_name"]').val(),
+            creditor_reference: $form.find('[name="creditor_reference"]').val(),
             amelia_customer_id: $form.find('[name="amelia_customer_id"]').val(),
             customer_name: $form.find('[name="customer_name"]').val(),
             customer_phone: $form.find('[name="customer_phone"]').val(),
             customer_email: $form.find('[name="customer_email"]').val(),
             customer_address: $form.find('[name="customer_address"]').val(),
+            debtor2_name: $form.find('[name="debtor2_name"]').val(),
+            debtor2_phone: $form.find('[name="debtor2_phone"]').val(),
+            debtor3_name: $form.find('[name="debtor3_name"]').val(),
+            debtor3_phone: $form.find('[name="debtor3_phone"]').val(),
+            num_debtors: $form.find('[name="num_debtors"]').val(),
             original_amount: $form.find('[name="original_amount"]').val(),
             current_balance: $form.find('[name="current_balance"]').val(),
             currency: $form.find('[name="currency"]').val(),

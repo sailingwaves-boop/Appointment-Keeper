@@ -77,11 +77,18 @@ class AK_Debt_Ledger_Ajax_Handlers {
         $entry_id = isset($_POST['entry_id']) ? intval($_POST['entry_id']) : 0;
         
         $data = array(
+            'creditor_name' => sanitize_text_field($_POST['creditor_name']),
+            'creditor_reference' => sanitize_text_field($_POST['creditor_reference']),
             'amelia_customer_id' => isset($_POST['amelia_customer_id']) && !empty($_POST['amelia_customer_id']) ? intval($_POST['amelia_customer_id']) : null,
             'customer_name' => sanitize_text_field($_POST['customer_name']),
             'customer_phone' => sanitize_text_field($_POST['customer_phone']),
             'customer_email' => sanitize_email($_POST['customer_email']),
             'customer_address' => sanitize_textarea_field($_POST['customer_address']),
+            'debtor2_name' => isset($_POST['debtor2_name']) ? sanitize_text_field($_POST['debtor2_name']) : '',
+            'debtor2_phone' => isset($_POST['debtor2_phone']) ? sanitize_text_field($_POST['debtor2_phone']) : '',
+            'debtor3_name' => isset($_POST['debtor3_name']) ? sanitize_text_field($_POST['debtor3_name']) : '',
+            'debtor3_phone' => isset($_POST['debtor3_phone']) ? sanitize_text_field($_POST['debtor3_phone']) : '',
+            'num_debtors' => isset($_POST['num_debtors']) ? intval($_POST['num_debtors']) : 1,
             'original_amount' => floatval($_POST['original_amount']),
             'current_balance' => floatval($_POST['current_balance']),
             'currency' => sanitize_text_field($_POST['currency']),
