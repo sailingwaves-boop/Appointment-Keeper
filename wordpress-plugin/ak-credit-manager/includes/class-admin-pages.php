@@ -427,6 +427,13 @@ class AK_Credit_Manager_Admin_Pages {
                     'call_credits' => intval($_POST['premium_calls']),
                     'email_credits' => intval($_POST['premium_emails']),
                     'price' => floatval($_POST['premium_price'])
+                ),
+                'enterprise' => array(
+                    'name' => 'Enterprise',
+                    'sms_credits' => intval($_POST['enterprise_sms']),
+                    'call_credits' => intval($_POST['enterprise_calls']),
+                    'email_credits' => intval($_POST['enterprise_emails']),
+                    'price' => floatval($_POST['enterprise_price'])
                 )
             );
             
@@ -512,6 +519,13 @@ class AK_Credit_Manager_Admin_Pages {
                                 <td><input type="number" name="premium_calls" value="<?php echo intval($plans['premium']['call_credits'] ?? 150); ?>" min="0"></td>
                                 <td><input type="number" name="premium_emails" value="<?php echo intval($plans['premium']['email_credits'] ?? 1000); ?>" min="0"></td>
                                 <td><input type="number" name="premium_price" value="<?php echo floatval($plans['premium']['price'] ?? 49.99); ?>" min="0" step="0.01"></td>
+                            </tr>
+                            <tr>
+                                <td><strong><?php _e('Enterprise', 'ak-credit-manager'); ?></strong></td>
+                                <td><input type="number" name="enterprise_sms" value="<?php echo intval($plans['enterprise']['sms_credits'] ?? 2000); ?>" min="0"></td>
+                                <td><input type="number" name="enterprise_calls" value="<?php echo intval($plans['enterprise']['call_credits'] ?? 500); ?>" min="0"></td>
+                                <td><input type="number" name="enterprise_emails" value="<?php echo intval($plans['enterprise']['email_credits'] ?? 5000); ?>" min="0"></td>
+                                <td><input type="number" name="enterprise_price" value="<?php echo floatval($plans['enterprise']['price'] ?? 149.99); ?>" min="0" step="0.01"></td>
                             </tr>
                         </tbody>
                     </table>

@@ -76,6 +76,13 @@ class AK_Credit_Manager {
                     'call_credits' => 150,
                     'email_credits' => 1000,
                     'price' => 49.99
+                ),
+                'enterprise' => array(
+                    'name' => 'Enterprise',
+                    'sms_credits' => 2000,
+                    'call_credits' => 500,
+                    'email_credits' => 5000,
+                    'price' => 149.99
                 )
             ),
             // Free month credits (same as basic by default)
