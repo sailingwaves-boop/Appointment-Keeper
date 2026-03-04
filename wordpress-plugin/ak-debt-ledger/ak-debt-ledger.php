@@ -2,35 +2,30 @@
 /**
  * Plugin Name: AppointmentKeeper AK Debt Ledger
  * Plugin URI: https://appointmentkeeper.com
- * Description: A billing ledger plugin for tracking debts, payments, and sending reminders via Twilio SMS and email. Integrates with Amelia booking plugin.
- * Version: 1.0.0
+ * Description: Complete billing ledger with credit management, SMS/Email/Voice reminders via Twilio, Amelia integration, and referral system.
+ * Version: 2.0.0
  * Author: AppointmentKeeper
  * License: GPL v2 or later
  * Text Domain: ak-debt-ledger
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Define plugin constants
-define('AK_DEBT_LEDGER_VERSION', '1.0.0');
+define('AK_DEBT_LEDGER_VERSION', '2.0.0');
 define('AK_DEBT_LEDGER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AK_DEBT_LEDGER_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Include required files
 require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-database.php';
 require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-amelia-integration.php';
-require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-twilio-sms.php';
-require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-email-sender.php';
+require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-twilio.php';
 require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-reminder-cron.php';
 require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-admin-pages.php';
 require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-ajax-handlers.php';
+require_once AK_DEBT_LEDGER_PLUGIN_DIR . 'includes/class-customer-panel.php';
 
-/**
- * Main Plugin Class
- */
 class AK_Debt_Ledger {
     
     private static $instance = null;
@@ -43,22 +38,16 @@ class AK_Debt_Ledger {
     }
     
     private function __construct() {
-        // Activation/Deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
         
-        // Initialize components
         add_action('plugins_loaded', array($this, 'init'));
     }
     
     public function activate() {
-        // Create database tables
         AK_Debt_Ledger_Database::create_tables();
-        
-        // Set default options
         $this->set_default_options();
         
-        // Schedule cron
         if (!wp_next_scheduled('ak_debt_ledger_reminder_cron')) {
             wp_schedule_event(time(), 'hourly', 'ak_debt_ledger_reminder_cron');
         }
@@ -67,7 +56,6 @@ class AK_Debt_Ledger {
     }
     
     public function deactivate() {
-        // Clear scheduled cron
         wp_clear_scheduled_hook('ak_debt_ledger_reminder_cron');
     }
     
@@ -76,10 +64,16 @@ class AK_Debt_Ledger {
             'twilio_account_sid' => '',
             'twilio_auth_token' => '',
             'twilio_phone_number' => '',
+            'twilio_call_number' => '',
+            'sendgrid_api_key' => '',
             'reminder_interval_days' => 7,
-            'sms_template' => 'Hi {customer_name}, this is a reminder that you have an outstanding balance of {currency}{current_balance}. Please arrange payment at your earliest convenience. - AppointmentKeeper',
+            'low_credit_threshold' => 10,
+            'signup_link' => home_url('/register'),
+            'sms_template' => 'Hi {customer_name}, this is a reminder that you have an outstanding balance of {currency}{current_balance}. Please arrange payment. - {creditor_name}',
             'email_subject_template' => 'Payment Reminder - Outstanding Balance of {currency}{current_balance}',
-            'email_body_template' => "Dear {customer_name},\n\nThis is a friendly reminder that you have an outstanding balance of {currency}{current_balance}.\n\nPlease arrange payment at your earliest convenience.\n\nIf you have already made this payment, please disregard this message.\n\nBest regards,\nAppointmentKeeper",
+            'email_body_template' => "Dear {customer_name},\n\nThis is a reminder that you have an outstanding balance of {currency}{current_balance}.\n\nPlease arrange payment at your earliest convenience.\n\nBest regards,\n{creditor_name}",
+            'call_script_template' => 'Hello {customer_name}. This is a reminder from {creditor_name} that you have an outstanding balance of {currency} {current_balance}. Please arrange payment at your earliest convenience. Thank you. Goodbye.',
+            'referral_sms_template' => 'Hi! {referrer_name} thinks you would benefit from AppointmentKeeper - never miss an appointment again! Plus get a FREE Debt Ledger. Sign up here: {signup_link}',
             'from_email' => get_option('admin_email'),
             'from_name' => get_bloginfo('name')
         );
@@ -90,19 +84,22 @@ class AK_Debt_Ledger {
     }
     
     public function init() {
-        // Load text domain
         load_plugin_textdomain('ak-debt-ledger', false, dirname(plugin_basename(__FILE__)) . '/languages');
         
-        // Initialize admin pages
+        // Initialize Amelia integration
+        new AK_Debt_Ledger_Amelia_Integration();
+        
         if (is_admin()) {
             new AK_Debt_Ledger_Admin_Pages();
             new AK_Debt_Ledger_Ajax_Handlers();
         }
         
-        // Initialize cron handler
+        // Customer panel (frontend)
+        new AK_Debt_Ledger_Customer_Panel();
+        
+        // Cron handler
         new AK_Debt_Ledger_Reminder_Cron();
     }
 }
 
-// Initialize the plugin
 AK_Debt_Ledger::get_instance();

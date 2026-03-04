@@ -1,0 +1,529 @@
+/* AK Debt Ledger Frontend Styles */
+
+/* Credit Balance Widget */
+.ak-credit-balance-widget {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ak-credit-balance-widget h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.ak-credits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.ak-credit-box {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    background: #f5f5f5;
+}
+
+.ak-credit-sms { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.ak-credit-call { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+.ak-credit-email { background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; }
+
+.ak-credit-icon {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.ak-credit-number {
+    display: block;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.ak-credit-label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.ak-usage-this-month {
+    margin-top: 15px;
+    text-align: center;
+    color: #666;
+}
+
+.ak-low-credit-warning {
+    margin-top: 15px;
+    padding: 10px;
+    background: #fff3cd;
+    border-radius: 4px;
+    text-align: center;
+    color: #856404;
+}
+
+.ak-low-credit-warning a {
+    color: #0073aa;
+    font-weight: bold;
+}
+
+/* Ledger Frontend */
+.ak-ledger-frontend {
+    max-width: 800px;
+}
+
+.ak-ledger-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ak-ledger-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+/* Buttons */
+.ak-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.ak-btn-primary {
+    background: #0073aa;
+    color: white;
+}
+
+.ak-btn-primary:hover {
+    background: #005a87;
+}
+
+.ak-btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.ak-btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.ak-btn-outline {
+    background: transparent;
+    border: 1px solid #0073aa;
+    color: #0073aa;
+}
+
+.ak-btn-small {
+    padding: 5px 12px;
+    font-size: 12px;
+}
+
+/* Form Panel */
+.ak-form-panel {
+    background: #fff;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.ak-form-panel h4 {
+    margin: 0 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #0073aa;
+}
+
+.ak-form-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.ak-form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.ak-form-section h5 {
+    margin: 0 0 15px 0;
+    color: #0073aa;
+}
+
+.ak-form-row {
+    margin-bottom: 15px;
+}
+
+.ak-form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.ak-form-row input[type="text"],
+.ak-form-row input[type="email"],
+.ak-form-row input[type="tel"],
+.ak-form-row input[type="number"],
+.ak-form-row select,
+.ak-form-row textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.ak-form-row input:focus,
+.ak-form-row select:focus,
+.ak-form-row textarea:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,115,170,0.2);
+}
+
+.ak-form-row-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.ak-form-help {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.ak-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.ak-checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.ak-checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.ak-debtor-fields {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border-left: 3px solid #0073aa;
+}
+
+.ak-debtor-fields h6 {
+    margin: 0 0 10px 0;
+    color: #0073aa;
+}
+
+.ak-extra-debtor {
+    border-left-color: #6c757d;
+}
+
+.ak-extra-debtor h6 {
+    color: #6c757d;
+}
+
+.ak-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Debt List */
+.ak-debt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.ak-no-debts {
+    text-align: center;
+    padding: 40px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    color: #666;
+}
+
+.ak-debt-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #0073aa;
+}
+
+.ak-debt-card.ak-status-paid {
+    border-left-color: #28a745;
+    opacity: 0.7;
+}
+
+.ak-debt-card.ak-status-written_off {
+    border-left-color: #dc3545;
+    opacity: 0.6;
+}
+
+.ak-debt-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.ak-debt-info h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.ak-debt-phone {
+    color: #666;
+    font-size: 13px;
+}
+
+.ak-joint-debt {
+    display: inline-block;
+    background: #e0e0e0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+.ak-debt-amount {
+    text-align: right;
+}
+
+.ak-balance {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.ak-balance.ak-owing {
+    color: #dc3545;
+}
+
+.ak-balance.ak-paid {
+    color: #28a745;
+}
+
+.ak-debt-amount small {
+    color: #999;
+}
+
+.ak-debt-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.ak-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #e0e0e0;
+    color: #333;
+}
+
+.ak-status-open .ak-status-badge,
+.ak-debt-card.ak-status-open .ak-status-badge {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.ak-status-paid .ak-status-badge,
+.ak-debt-card.ak-status-paid .ak-status-badge {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ak-reminder-count {
+    font-size: 12px;
+    color: #666;
+}
+
+.ak-debt-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Refer a Friend */
+.ak-refer-friend-widget {
+    background: #fff;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ak-refer-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.ak-refer-header h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.ak-refer-header p {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.ak-friend-field {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.ak-friend-field h5 {
+    margin: 0 0 10px 0;
+    color: #666;
+}
+
+.ak-referral-history {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.ak-referral-history h5 {
+    margin: 0 0 10px 0;
+}
+
+.ak-referral-history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ak-referral-history li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ak-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    background: #e0e0e0;
+    margin-left: 8px;
+}
+
+.ak-badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ak-badge-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Usage History */
+.ak-usage-history-widget {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ak-usage-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ak-usage-table th,
+.ak-usage-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.ak-usage-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+}
+
+.ak-usage-table tr.ak-status-failed {
+    opacity: 0.6;
+}
+
+.ak-status-badge.ak-status-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ak-status-badge.ak-status-failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Login Required */
+.ak-login-required {
+    text-align: center;
+    padding: 40px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    color: #666;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ak-credits-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ak-form-row-inline {
+        grid-template-columns: 1fr;
+    }
+    
+    .ak-ledger-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .ak-debt-main {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .ak-debt-amount {
+        text-align: left;
+    }
+    
+    .ak-debt-actions {
+        flex-direction: column;
+    }
+    
+    .ak-debt-actions .ak-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
