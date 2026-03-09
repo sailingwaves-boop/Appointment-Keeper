@@ -1,0 +1,329 @@
+/* AppointmentKeeper Customer Dashboard Styles */
+
+.ak-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header */
+.ak-dashboard-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.ak-welcome h1 {
+    margin: 0 0 5px 0;
+    font-size: 28px;
+}
+
+.ak-welcome p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.ak-credits-summary {
+    display: flex;
+    gap: 15px;
+}
+
+.ak-credit-pill {
+    background: rgba(255,255,255,0.15);
+    padding: 12px 20px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ak-credit-icon {
+    font-size: 20px;
+}
+
+.ak-credit-count {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.ak-credit-label {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Navigation Tabs */
+.ak-dashboard-nav {
+    display: flex;
+    gap: 5px;
+    background: #f5f5f5;
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.ak-tab-btn {
+    flex: 1;
+    min-width: 150px;
+    padding: 15px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #666;
+}
+
+.ak-tab-btn:hover {
+    background: #e0e0e0;
+}
+
+.ak-tab-btn.active {
+    background: white;
+    color: #1e3a5f;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Tab Content */
+.ak-dashboard-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-height: 400px;
+}
+
+.ak-tab-content {
+    display: none;
+    padding: 30px;
+}
+
+.ak-tab-content.active {
+    display: block;
+}
+
+.ak-section-header {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.ak-section-header h2 {
+    margin: 0 0 5px 0;
+    color: #1e3a5f;
+}
+
+.ak-section-header p {
+    margin: 0;
+    color: #666;
+}
+
+/* Notice Box */
+.ak-notice {
+    background: #f8f9fa;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    color: #666;
+}
+
+/* Footer */
+.ak-dashboard-footer {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.ak-quick-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.ak-action-btn {
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.ak-book-appointment {
+    background: #1e3a5f;
+    color: white;
+}
+
+.ak-book-appointment:hover {
+    background: #2d5a87;
+    color: white;
+}
+
+.ak-add-debt {
+    background: #28a745;
+    color: white;
+}
+
+.ak-add-debt:hover {
+    background: #218838;
+    color: white;
+}
+
+.ak-top-up {
+    background: #ffc107;
+    color: #333;
+}
+
+.ak-top-up:hover {
+    background: #e0a800;
+    color: #333;
+}
+
+/* Login Prompt */
+.ak-login-prompt {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.ak-login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    max-width: 400px;
+}
+
+.ak-login-box h2 {
+    margin: 0 0 10px 0;
+    color: #1e3a5f;
+}
+
+.ak-login-box p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.ak-login-btn {
+    display: inline-block;
+    background: #1e3a5f;
+    color: white;
+    padding: 15px 40px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.ak-login-btn:hover {
+    background: #2d5a87;
+    color: white;
+}
+
+.ak-register-link {
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+/* Usage Table */
+.ak-usage-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ak-usage-table th,
+.ak-usage-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.ak-usage-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.ak-status-success {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.ak-status-failed {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* Refer Section */
+.ak-refer-basic {
+    text-align: center;
+    padding: 20px;
+}
+
+.ak-refer-reward {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.ak-refer-share {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.ak-share-link {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ak-dashboard-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .ak-credits-summary {
+        justify-content: center;
+    }
+    
+    .ak-tab-btn {
+        min-width: 100px;
+        padding: 12px 15px;
+        font-size: 13px;
+    }
+    
+    .ak-tab-content {
+        padding: 20px;
+    }
+    
+    .ak-quick-actions {
+        flex-direction: column;
+    }
+    
+    .ak-action-btn {
+        text-align: center;
+    }
+}
