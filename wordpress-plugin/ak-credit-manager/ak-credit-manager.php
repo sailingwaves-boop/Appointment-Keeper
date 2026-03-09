@@ -23,6 +23,7 @@ require_once AK_CREDIT_MANAGER_PLUGIN_DIR . 'includes/class-credit-operations.ph
 require_once AK_CREDIT_MANAGER_PLUGIN_DIR . 'includes/class-admin-pages.php';
 require_once AK_CREDIT_MANAGER_PLUGIN_DIR . 'includes/class-amelia-integration.php';
 require_once AK_CREDIT_MANAGER_PLUGIN_DIR . 'includes/class-ajax-handlers.php';
+require_once AK_CREDIT_MANAGER_PLUGIN_DIR . 'includes/class-rest-api.php';
 
 class AK_Credit_Manager {
     
@@ -45,6 +46,7 @@ class AK_Credit_Manager {
     public function activate() {
         AK_Credit_Manager_Database::create_tables();
         $this->set_default_options();
+        $this->generate_api_key();
         flush_rewrite_rules();
     }
     
@@ -105,10 +107,23 @@ class AK_Credit_Manager {
     public function init() {
         load_plugin_textdomain('ak-credit-manager', false, dirname(plugin_basename(__FILE__)) . '/languages');
         
+        // Always load REST API (needed for external calls)
+        new AK_Credit_Manager_REST_API();
+        
         if (is_admin()) {
             new AK_Credit_Manager_Admin_Pages();
             new AK_Credit_Manager_Ajax_Handlers();
             new AK_Credit_Manager_Amelia_Integration();
+        }
+    }
+    
+    /**
+     * Generate API key if not exists
+     */
+    private function generate_api_key() {
+        if (!get_option('ak_credit_manager_api_key')) {
+            $api_key = 'ak_' . wp_generate_password(32, false);
+            add_option('ak_credit_manager_api_key', $api_key);
         }
     }
 }

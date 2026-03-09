@@ -485,6 +485,46 @@ class AK_Credit_Manager_Admin_Pages {
                 </div>
                 
                 <div class="ak-settings-section">
+                    <h2><?php _e('API Settings (for Zapier)', 'ak-credit-manager'); ?></h2>
+                    <p class="description"><?php _e('Use this API key to connect Zapier or other external services to deduct credits.', 'ak-credit-manager'); ?></p>
+                    
+                    <table class="form-table">
+                        <tr>
+                            <th><?php _e('API Key', 'ak-credit-manager'); ?></th>
+                            <td>
+                                <code style="background:#f0f0f0;padding:10px;display:inline-block;font-size:14px;"><?php echo esc_html(get_option('ak_credit_manager_api_key', 'Not generated')); ?></code>
+                                <p class="description"><?php _e('Keep this secret. Use in Zapier as X-API-Key header.', 'ak-credit-manager'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('API Endpoint', 'ak-credit-manager'); ?></th>
+                            <td>
+                                <code style="background:#f0f0f0;padding:10px;display:inline-block;font-size:14px;"><?php echo esc_url(rest_url('ak-credit/v1/deduct')); ?></code>
+                                <p class="description"><?php _e('POST to this URL to deduct credits.', 'ak-credit-manager'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('Example Zapier Request', 'ak-credit-manager'); ?></th>
+                            <td>
+                                <pre style="background:#f0f0f0;padding:10px;font-size:12px;overflow-x:auto;">POST <?php echo esc_url(rest_url('ak-credit/v1/deduct')); ?>
+
+Headers:
+  X-API-Key: your-api-key
+  Content-Type: application/json
+
+Body:
+{
+  "email": "customer@example.com",
+  "credit_type": "sms",
+  "amount": 1,
+  "reason": "Appointment reminder sent"
+}</pre>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="ak-settings-section">
                     <h2><?php _e('Plan Configurations', 'ak-credit-manager'); ?></h2>
                     <p class="description"><?php _e('Configure the credits for each subscription plan', 'ak-credit-manager'); ?></p>
                     
