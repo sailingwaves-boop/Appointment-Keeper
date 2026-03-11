@@ -581,6 +581,7 @@ body {
   display: flex;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
+  padding-bottom: 4rem;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
 }
