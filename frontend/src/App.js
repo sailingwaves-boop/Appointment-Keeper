@@ -37,6 +37,13 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // CRITICAL: If returning from OAuth callback, skip the /me check.
+    // AuthCallback will exchange the session_id and establish the session first.
+    if (window.location.hash?.includes('session_id=')) {
+      setLoading(false);
+      return;
+    }
+    
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchUser();
@@ -72,6 +79,14 @@ const AuthProvider = ({ children }) => {
     return res.data;
   };
 
+  const loginWithGoogle = async (sessionId) => {
+    const res = await axios.post(`${API_URL}/api/auth/google/session`, { session_id: sessionId });
+    localStorage.setItem('token', res.data.session_token);
+    setToken(res.data.session_token);
+    setUser(res.data.user);
+    return res.data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -84,7 +99,7 @@ const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, loginWithGoogle, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -118,6 +133,12 @@ const AuthPage = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    const redirectUrl = window.location.origin + '/auth/callback';
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-container">
@@ -125,6 +146,25 @@ const AuthPage = () => {
           <Brain className="auth-logo" />
           <h1>AI Helper</h1>
           <p>Your personal AI assistant with unlimited memory</p>
+        </div>
+
+        <button 
+          onClick={handleGoogleLogin}
+          className="google-btn"
+          type="button"
+          data-testid="google-login-btn"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.26c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+            <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <div className="auth-divider">
+          <span>or</span>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -187,6 +227,53 @@ const AuthPage = () => {
           </button>
         </p>
       </div>
+    </div>
+  );
+};
+
+// Google OAuth Callback
+const AuthCallback = () => {
+  const { loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const hasProcessed = React.useRef(false);
+
+  useEffect(() => {
+    // Prevent double processing in StrictMode
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
+    const processCallback = async () => {
+      // Get session_id from URL hash
+      const hash = window.location.hash;
+      const sessionIdMatch = hash.match(/session_id=([^&]+)/);
+      
+      if (!sessionIdMatch) {
+        toast.error('Authentication failed - no session ID');
+        navigate('/auth');
+        return;
+      }
+
+      const sessionId = sessionIdMatch[1];
+
+      try {
+        await loginWithGoogle(sessionId);
+        toast.success('Welcome!');
+        // Clear the hash and navigate to home
+        window.history.replaceState(null, '', window.location.pathname);
+        navigate('/');
+      } catch (err) {
+        toast.error(err.response?.data?.detail || 'Google sign-in failed');
+        navigate('/auth');
+      }
+    };
+
+    processCallback();
+  }, [loginWithGoogle, navigate]);
+
+  return (
+    <div className="loading-screen">
+      <Brain size={48} className="spin" />
+      <p>Signing you in...</p>
     </div>
   );
 };
@@ -597,6 +684,298 @@ const MemoryView = () => {
   );
 };
 
+// Phone & SMS View
+const PhoneView = () => {
+  const [activeTab, setActiveTab] = useState('send');
+  const [contacts, setContacts] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [callHistory, setCallHistory] = useState([]);
+  const [smsHistory, setSmsHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  
+  // SMS form
+  const [smsPhone, setSmsPhone] = useState('');
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsContactName, setSmsContactName] = useState('');
+  
+  // Call form
+  const [callPhone, setCallPhone] = useState('');
+  const [callMessage, setCallMessage] = useState('');
+  const [callContactName, setCallContactName] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [contactsRes, subRes, callsRes, smsRes] = await Promise.all([
+        axios.get(`${API_URL}/api/contacts`),
+        axios.get(`${API_URL}/api/subscription/status`),
+        axios.get(`${API_URL}/api/call/history`).catch(() => ({ data: { calls: [] } })),
+        axios.get(`${API_URL}/api/sms/history`).catch(() => ({ data: { messages: [] } }))
+      ]);
+      setContacts(contactsRes.data);
+      setSubscription(subRes.data);
+      setCallHistory(callsRes.data.calls || []);
+      setSmsHistory(smsRes.data.messages || []);
+    } catch (err) {
+      console.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectContact = (contact, type) => {
+    if (type === 'sms') {
+      setSmsPhone(contact.phone);
+      setSmsContactName(contact.name);
+    } else {
+      setCallPhone(contact.phone);
+      setCallContactName(contact.name);
+    }
+  };
+
+  const sendSMS = async (e) => {
+    e.preventDefault();
+    if (!smsPhone || !smsMessage) return;
+    
+    setSending(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/sms/send`, {
+        to_phone: smsPhone,
+        message: smsMessage,
+        contact_name: smsContactName || null
+      });
+      
+      if (res.data.success) {
+        toast.success('SMS sent successfully!');
+        setSmsMessage('');
+        fetchData(); // Refresh history
+      } else {
+        toast.error(res.data.error || 'Failed to send SMS');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send SMS');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const makeCall = async (e) => {
+    e.preventDefault();
+    if (!callPhone || !callMessage) return;
+    
+    setSending(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/call/make`, {
+        to_phone: callPhone,
+        message: callMessage,
+        contact_name: callContactName || null
+      });
+      
+      if (res.data.success) {
+        toast.success('Call initiated!');
+        setCallMessage('');
+        fetchData(); // Refresh history
+      } else {
+        toast.error(res.data.error || 'Failed to make call');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to make call');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const canUsePhoneFeatures = subscription?.plan && !subscription?.plan.includes('starter');
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  return (
+    <div className="phone-view">
+      <div className="view-header">
+        <h2><Phone size={24} /> Phone & SMS</h2>
+        {subscription?.is_subscribed && (
+          <div className="usage-badges">
+            <span className="usage-badge">
+              <Phone size={14} /> {subscription.call_minutes_remaining} mins
+            </span>
+            <span className="usage-badge">
+              <MessageSquare size={14} /> {subscription.texts_remaining} texts
+            </span>
+          </div>
+        )}
+      </div>
+
+      {!canUsePhoneFeatures ? (
+        <div className="upgrade-prompt">
+          <Phone size={48} />
+          <h3>Upgrade to Pro or Business</h3>
+          <p>Phone calls and SMS require a Pro or Business subscription.</p>
+          <p>Pro includes 60 minutes and 100 texts per month.</p>
+        </div>
+      ) : (
+        <>
+          <div className="phone-tabs">
+            <button 
+              className={activeTab === 'send' ? 'active' : ''}
+              onClick={() => setActiveTab('send')}
+              data-testid="tab-send"
+            >
+              Send Message
+            </button>
+            <button 
+              className={activeTab === 'call' ? 'active' : ''}
+              onClick={() => setActiveTab('call')}
+              data-testid="tab-call"
+            >
+              Make Call
+            </button>
+            <button 
+              className={activeTab === 'history' ? 'active' : ''}
+              onClick={() => setActiveTab('history')}
+              data-testid="tab-history"
+            >
+              History
+            </button>
+          </div>
+
+          {activeTab === 'send' && (
+            <div className="phone-section">
+              <div className="contacts-quick-select">
+                <h4>Quick Select Contact</h4>
+                <div className="contact-chips">
+                  {contacts.slice(0, 5).map(contact => (
+                    <button 
+                      key={contact.id}
+                      onClick={() => selectContact(contact, 'sms')}
+                      className={smsPhone === contact.phone ? 'selected' : ''}
+                    >
+                      {contact.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <form onSubmit={sendSMS} className="phone-form">
+                <input
+                  type="tel"
+                  placeholder="Phone number (e.g., +44...)"
+                  value={smsPhone}
+                  onChange={(e) => setSmsPhone(e.target.value)}
+                  required
+                  data-testid="sms-phone-input"
+                />
+                <textarea
+                  placeholder="Your message..."
+                  value={smsMessage}
+                  onChange={(e) => setSmsMessage(e.target.value)}
+                  required
+                  rows={3}
+                  data-testid="sms-message-input"
+                />
+                <button type="submit" disabled={sending} data-testid="send-sms-btn">
+                  {sending ? 'Sending...' : 'Send SMS'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'call' && (
+            <div className="phone-section">
+              <div className="contacts-quick-select">
+                <h4>Quick Select Contact</h4>
+                <div className="contact-chips">
+                  {contacts.slice(0, 5).map(contact => (
+                    <button 
+                      key={contact.id}
+                      onClick={() => selectContact(contact, 'call')}
+                      className={callPhone === contact.phone ? 'selected' : ''}
+                    >
+                      {contact.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <form onSubmit={makeCall} className="phone-form">
+                <input
+                  type="tel"
+                  placeholder="Phone number (e.g., +44...)"
+                  value={callPhone}
+                  onChange={(e) => setCallPhone(e.target.value)}
+                  required
+                  data-testid="call-phone-input"
+                />
+                <textarea
+                  placeholder="What should the AI say? (e.g., 'Hi John, this is a reminder about your appointment at 3pm today.')"
+                  value={callMessage}
+                  onChange={(e) => setCallMessage(e.target.value)}
+                  required
+                  rows={3}
+                  data-testid="call-message-input"
+                />
+                <button type="submit" disabled={sending} data-testid="make-call-btn">
+                  {sending ? 'Calling...' : 'Make Call'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="phone-section history-section">
+              <h4>SMS History</h4>
+              {smsHistory.length === 0 ? (
+                <p className="no-history">No messages sent yet.</p>
+              ) : (
+                <div className="history-list">
+                  {smsHistory.slice(0, 10).map(msg => (
+                    <div key={msg.id} className="history-item">
+                      <span className="history-icon"><MessageSquare size={16} /></span>
+                      <div className="history-details">
+                        <strong>{msg.contact_name || msg.to_phone}</strong>
+                        <p>{msg.message}</p>
+                        <span className="history-date">{new Date(msg.created_at).toLocaleString()}</span>
+                      </div>
+                      <span className={`status-badge ${msg.status}`}>{msg.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <h4>Call History</h4>
+              {callHistory.length === 0 ? (
+                <p className="no-history">No calls made yet.</p>
+              ) : (
+                <div className="history-list">
+                  {callHistory.slice(0, 10).map(call => (
+                    <div key={call.id} className="history-item">
+                      <span className="history-icon"><Phone size={16} /></span>
+                      <div className="history-details">
+                        <strong>{call.contact_name || call.to_phone}</strong>
+                        <p>{call.message?.substring(0, 50)}...</p>
+                        <span className="history-date">
+                          {new Date(call.created_at).toLocaleString()}
+                          {call.duration && ` • ${call.duration}s`}
+                        </span>
+                      </div>
+                      <span className={`status-badge ${call.status}`}>{call.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
 // Subscription/Pricing View
 const SubscriptionView = () => {
   const [plans, setPlans] = useState([]);
@@ -851,6 +1230,8 @@ const Dashboard = () => {
         return <ContactsView />;
       case 'memory':
         return <MemoryView />;
+      case 'phone':
+        return <PhoneView />;
       case 'subscription':
         return <SubscriptionView />;
       default:
@@ -882,6 +1263,14 @@ const Dashboard = () => {
           >
             <MessageSquare size={20} />
             Chat
+          </button>
+          <button
+            className={activeView === 'phone' ? 'active' : ''}
+            onClick={() => { setActiveView('phone'); setSidebarOpen(false); }}
+            data-testid="nav-phone"
+          >
+            <Phone size={20} />
+            Phone & SMS
           </button>
           <button
             className={activeView === 'contacts' ? 'active' : ''}
@@ -957,25 +1346,40 @@ function App() {
     <Router>
       <AuthProvider>
         <Toaster position="top-right" richColors />
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/disclosure" element={<DisclosurePage />} />
-          <Route path="/subscription/success" element={
-            <ProtectedRoute>
-              <SubscriptionSuccess />
-            </ProtectedRoute>
-          } />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <AppRoutes />
       </AuthProvider>
     </Router>
+  );
+}
+
+// Separate component to handle routing with hash detection
+function AppRoutes() {
+  const location = window.location;
+  
+  // Check URL hash for session_id (Google OAuth callback)
+  if (location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
+  
+  return (
+    <Routes>
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/disclosure" element={<DisclosurePage />} />
+      <Route path="/subscription/success" element={
+        <ProtectedRoute>
+          <SubscriptionSuccess />
+        </ProtectedRoute>
+      } />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
 

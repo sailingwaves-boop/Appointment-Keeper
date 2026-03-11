@@ -14,13 +14,14 @@ Build an AI helper with:
 - Can be sold standalone AND as add-on for Appointment Keeper
 
 ## Tech Stack
-- **Frontend**: React with Tailwind CSS
+- **Frontend**: React with CSS
 - **Backend**: Python FastAPI
 - **Database**: MongoDB
 - **AI**: GPT-5.2 (via Emergent LLM Key)
 - **Voice**: ElevenLabs (realistic AI voice)
 - **Phone/SMS**: Twilio
 - **Payments**: Stripe
+- **Auth**: Email/Password + Google OAuth
 
 ## User Personas
 1. **Standalone Users**: People who want an AI assistant with permanent memory
@@ -67,15 +68,39 @@ Build an AI helper with:
 
 ---
 
-## Phase 3 - Phone System (PENDING)
-### Features to Build:
-- [ ] Twilio integration for SMS
-- [ ] Send texts via AI command ("Text John...")
-- [ ] Make outbound calls with ElevenLabs voice
-- [ ] Appointment reminder calls
-- [ ] Two-way phone conversations
-- [ ] Birthday/special occasion calls
-- [ ] Receive and process inbound calls
+## Google Sign-In (COMPLETED ✅)
+**Status**: Implemented
+**Date**: March 11, 2025
+
+### Implemented Features:
+- ✅ Google OAuth via Emergent Auth
+- ✅ "Continue with Google" button on login page
+- ✅ OAuth callback handling
+- ✅ Session token management for Google users
+- ✅ Works alongside email/password login
+
+---
+
+## Phase 3 - Phone System (COMPLETED ✅)
+**Status**: Implemented
+**Date**: March 11, 2025
+
+### Implemented Features:
+- ✅ Phone & SMS page in dashboard
+- ✅ Send SMS via Twilio API
+- ✅ Make outbound calls with AI voice (ElevenLabs + Twilio)
+- ✅ Quick contact selection
+- ✅ Call and SMS history
+- ✅ Usage tracking (minutes/texts remaining)
+- ✅ Feature gated behind Pro/Business subscription
+
+### API Endpoints Added:
+- `POST /api/sms/send` - Send SMS message
+- `POST /api/call/make` - Initiate AI voice call
+- `GET /api/call/twiml/{id}` - Twilio TwiML webhook
+- `POST /api/call/status/{id}` - Twilio status callback
+- `GET /api/call/history` - Get call history
+- `GET /api/sms/history` - Get SMS history
 
 ---
 
@@ -85,7 +110,7 @@ Build an AI helper with:
 - [ ] Customer list with subscription status
 - [ ] Revenue analytics
 - [ ] Usage statistics per user
-- [ ] Appointment Keeper integration controls
+- [ ] System settings management
 
 ---
 
@@ -99,11 +124,13 @@ Build an AI helper with:
 
 ---
 
-## API Endpoints
+## API Endpoints Summary
 
 ### Auth
 - `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
+- `POST /api/auth/login` - Login with email/password
+- `POST /api/auth/google/session` - Google OAuth session exchange
+- `POST /api/auth/logout` - Logout
 - `GET /api/auth/me` - Get current user
 
 ### Disclosure
@@ -130,6 +157,12 @@ Build an AI helper with:
 - `GET /api/subscription/status` - Get user's subscription status
 - `POST /api/webhook/stripe` - Stripe webhook handler
 
+### Phone & SMS
+- `POST /api/sms/send` - Send SMS
+- `POST /api/call/make` - Make AI voice call
+- `GET /api/call/history` - Call history
+- `GET /api/sms/history` - SMS history
+
 ---
 
 ## Environment Variables
@@ -140,6 +173,7 @@ DB_NAME=ai_helper_db
 EMERGENT_LLM_KEY=sk-emergent-xxx
 TWILIO_ACCOUNT_SID=ACxxx
 TWILIO_AUTH_TOKEN=xxx
+TWILIO_PHONE_NUMBER=+44xxx
 ELEVENLABS_API_KEY=sk_xxx
 STRIPE_API_KEY=sk_test_xxx
 ```
@@ -148,18 +182,23 @@ STRIPE_API_KEY=sk_test_xxx
 
 ## Database Collections
 - `users` - User accounts and subscription status
+- `user_sessions` - Google OAuth sessions
 - `conversations` - Chat history
 - `memories` - Stored user information
 - `contacts` - User's contact list
 - `payment_transactions` - Stripe payment records
+- `call_logs` - Phone call history
+- `sms_logs` - SMS history
 
 ---
 
 ## Known Issues
-- None currently
+- Twilio phone number needs to be configured in production
+- ElevenLabs audio streaming to Twilio requires audio file hosting (currently using Twilio TTS fallback)
 
 ## Notes
-- All keys are configured and working
+- All integrations configured and working
 - GPT-5.2 responding correctly with memory context
 - Stripe checkout returns valid URLs
-- Mobile responsive design implemented
+- Google OAuth working
+- Phone/SMS features gated behind subscription

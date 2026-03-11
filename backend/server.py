@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +15,12 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
+import httpx
+from twilio.rest import Client as TwilioClient
+from twilio.twiml.voice_response import VoiceResponse, Gather
+from elevenlabs import ElevenLabs
+import base64
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -190,6 +197,32 @@ class SubscriptionStatusResponse(BaseModel):
     subscription_started_at: Optional[str] = None
     subscription_ends_at: Optional[str] = None
 
+class GoogleSessionRequest(BaseModel):
+    session_id: str
+
+# ============== SMS & CALL MODELS ==============
+
+class SendSMSRequest(BaseModel):
+    to_phone: str
+    message: str
+    contact_name: Optional[str] = None
+
+class MakeCallRequest(BaseModel):
+    to_phone: str
+    message: str
+    contact_name: Optional[str] = None
+    voice_id: Optional[str] = "EXAVITQu4vr4xnSDxMaL"  # Default ElevenLabs voice
+
+class SMSResponse(BaseModel):
+    success: bool
+    message_sid: Optional[str] = None
+    error: Optional[str] = None
+
+class CallResponse(BaseModel):
+    success: bool
+    call_sid: Optional[str] = None
+    error: Optional[str] = None
+
 # ============== AUTH HELPERS ==============
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -206,18 +239,36 @@ def create_access_token(data: dict) -> str:
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
+    
+    # First try JWT token (email/password login)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        if user_id:
+            user = await db.users.find_one({"id": user_id}, {"_id": 0})
+            if user:
+                return user
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        pass
     
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
+    # Then try session token (Google OAuth)
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if session:
+        # Check if session is expired
+        expires_at = session.get("expires_at")
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if expires_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
+        if user:
+            return user
+    
+    raise HTTPException(status_code=401, detail="Invalid token")
 
 # ============== AUTH ROUTES ==============
 
@@ -293,6 +344,98 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         disclosure_accepted=current_user.get("disclosure_accepted", False),
         is_subscribed=current_user.get("is_subscribed", False)
     )
+
+# ============== GOOGLE OAUTH ROUTES ==============
+
+@api_router.post("/auth/google/session")
+async def google_session(request: GoogleSessionRequest):
+    """Exchange Google OAuth session_id for user data and create session"""
+    
+    # Call Emergent Auth to get session data
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": request.session_id}
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid session ID")
+            
+            data = response.json()
+        except Exception as e:
+            logger.error(f"Google auth error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to verify Google session")
+    
+    # Check if user exists
+    email = data.get("email")
+    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    if existing_user:
+        # Update existing user
+        user_id = existing_user["id"]
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "name": data.get("name", existing_user.get("name")),
+                "picture": data.get("picture"),
+                "last_login": now
+            }}
+        )
+    else:
+        # Create new user
+        user_id = str(uuid.uuid4())
+        user_doc = {
+            "id": user_id,
+            "email": email,
+            "name": data.get("name", ""),
+            "picture": data.get("picture"),
+            "password_hash": None,  # No password for Google users
+            "created_at": now,
+            "disclosure_accepted": False,
+            "disclosure_accepted_at": None,
+            "is_subscribed": False,
+            "auth_provider": "google"
+        }
+        await db.users.insert_one(user_doc)
+    
+    # Create session
+    session_token = data.get("session_token") or str(uuid.uuid4())
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
+    session_doc = {
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at,
+        "created_at": now
+    }
+    
+    # Remove old sessions for this user
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one(session_doc)
+    
+    # Get updated user
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    return {
+        "session_token": session_token,
+        "user": UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            created_at=user["created_at"],
+            disclosure_accepted=user.get("disclosure_accepted", False),
+            is_subscribed=user.get("is_subscribed", False)
+        )
+    }
+
+@api_router.post("/auth/logout")
+async def logout(current_user: dict = Depends(get_current_user)):
+    """Logout user and clear session"""
+    await db.user_sessions.delete_many({"user_id": current_user["id"]})
+    return {"message": "Logged out successfully"}
 
 # ============== DISCLOSURE ROUTES ==============
 
@@ -711,6 +854,255 @@ async def stripe_webhook(request: Request):
     except Exception as e:
         logger.error(f"Webhook error: {str(e)}")
         return {"status": "error", "message": str(e)}
+
+# ============== SMS ROUTES ==============
+
+@api_router.post("/sms/send", response_model=SMSResponse)
+async def send_sms(request: SendSMSRequest, current_user: dict = Depends(get_current_user)):
+    """Send an SMS message via Twilio"""
+    
+    # Check if user has SMS quota (Pro or Business plan)
+    texts_remaining = current_user.get("texts_remaining", 0)
+    subscription_tier = current_user.get("subscription_tier", "")
+    
+    if not subscription_tier or "starter" in subscription_tier:
+        raise HTTPException(status_code=403, detail="SMS feature requires Pro or Business subscription")
+    
+    if texts_remaining <= 0:
+        raise HTTPException(status_code=403, detail="You have no SMS credits remaining. Please upgrade your plan.")
+    
+    try:
+        # Initialize Twilio client
+        account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+        auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        
+        if not account_sid or not auth_token:
+            raise HTTPException(status_code=500, detail="Twilio not configured")
+        
+        twilio_client = TwilioClient(account_sid, auth_token)
+        
+        # Get Twilio phone number (you'd typically have this in env)
+        from_number = os.environ.get('TWILIO_PHONE_NUMBER', '+15005550006')  # Test number
+        
+        # Send SMS
+        message = twilio_client.messages.create(
+            body=request.message,
+            from_=from_number,
+            to=request.to_phone
+        )
+        
+        # Decrement SMS quota
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$inc": {"texts_remaining": -1}}
+        )
+        
+        # Log the SMS
+        now = datetime.now(timezone.utc).isoformat()
+        sms_log = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "to_phone": request.to_phone,
+            "contact_name": request.contact_name,
+            "message": request.message,
+            "message_sid": message.sid,
+            "status": message.status,
+            "created_at": now
+        }
+        await db.sms_logs.insert_one(sms_log)
+        
+        return SMSResponse(success=True, message_sid=message.sid)
+        
+    except Exception as e:
+        logger.error(f"SMS error: {str(e)}")
+        return SMSResponse(success=False, error=str(e))
+
+# ============== VOICE CALL ROUTES ==============
+
+@api_router.post("/call/make", response_model=CallResponse)
+async def make_call(request: MakeCallRequest, http_request: Request, current_user: dict = Depends(get_current_user)):
+    """Initiate an outbound call with AI voice"""
+    
+    # Check if user has call minutes (Pro or Business plan)
+    call_minutes_remaining = current_user.get("call_minutes_remaining", 0)
+    subscription_tier = current_user.get("subscription_tier", "")
+    
+    if not subscription_tier or "starter" in subscription_tier:
+        raise HTTPException(status_code=403, detail="Voice call feature requires Pro or Business subscription")
+    
+    if call_minutes_remaining <= 0:
+        raise HTTPException(status_code=403, detail="You have no call minutes remaining. Please upgrade your plan.")
+    
+    try:
+        # Initialize Twilio client
+        account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+        auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        
+        if not account_sid or not auth_token:
+            raise HTTPException(status_code=500, detail="Twilio not configured")
+        
+        twilio_client = TwilioClient(account_sid, auth_token)
+        
+        # Get Twilio phone number
+        from_number = os.environ.get('TWILIO_PHONE_NUMBER', '+15005550006')
+        
+        # Store the call data for the webhook
+        call_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        
+        call_data = {
+            "id": call_id,
+            "user_id": current_user["id"],
+            "to_phone": request.to_phone,
+            "contact_name": request.contact_name,
+            "message": request.message,
+            "voice_id": request.voice_id,
+            "status": "initiating",
+            "created_at": now
+        }
+        await db.call_logs.insert_one(call_data)
+        
+        # Get base URL for webhooks
+        base_url = str(http_request.base_url).rstrip('/')
+        if 'localhost' in base_url or '0.0.0.0' in base_url:
+            # Use the frontend URL for webhooks in production
+            base_url = os.environ.get('WEBHOOK_BASE_URL', base_url)
+        
+        # Initiate the call
+        call = twilio_client.calls.create(
+            url=f"{base_url}/api/call/twiml/{call_id}",
+            to=request.to_phone,
+            from_=from_number,
+            status_callback=f"{base_url}/api/call/status/{call_id}",
+            status_callback_event=['completed', 'failed']
+        )
+        
+        # Update call log with SID
+        await db.call_logs.update_one(
+            {"id": call_id},
+            {"$set": {"call_sid": call.sid, "status": "initiated"}}
+        )
+        
+        # Decrement call minutes (1 minute minimum)
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$inc": {"call_minutes_remaining": -1}}
+        )
+        
+        return CallResponse(success=True, call_sid=call.sid)
+        
+    except Exception as e:
+        logger.error(f"Call error: {str(e)}")
+        return CallResponse(success=False, error=str(e))
+
+@api_router.get("/call/twiml/{call_id}", response_class=PlainTextResponse)
+async def call_twiml(call_id: str):
+    """Generate TwiML for the call (Twilio webhook)"""
+    
+    # Get call data
+    call_data = await db.call_logs.find_one({"id": call_id}, {"_id": 0})
+    
+    if not call_data:
+        response = VoiceResponse()
+        response.say("Sorry, there was an error with this call.")
+        return PlainTextResponse(content=str(response), media_type="application/xml")
+    
+    message = call_data.get("message", "Hello, this is a call from AI Helper.")
+    
+    # Generate speech using ElevenLabs
+    try:
+        elevenlabs_key = os.environ.get('ELEVENLABS_API_KEY')
+        voice_id = call_data.get("voice_id", "EXAVITQu4vr4xnSDxMaL")
+        
+        if elevenlabs_key:
+            eleven_client = ElevenLabs(api_key=elevenlabs_key)
+            
+            # Generate audio
+            audio_generator = eleven_client.text_to_speech.convert(
+                voice_id=voice_id,
+                text=message,
+                model_id="eleven_multilingual_v2"
+            )
+            
+            # Collect audio bytes
+            audio_bytes = b""
+            for chunk in audio_generator:
+                audio_bytes += chunk
+            
+            # Store audio temporarily (in production, use S3 or similar)
+            audio_id = str(uuid.uuid4())
+            await db.temp_audio.insert_one({
+                "id": audio_id,
+                "audio": base64.b64encode(audio_bytes).decode(),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Create TwiML that plays the audio
+            response = VoiceResponse()
+            # For now, use Twilio's built-in TTS as fallback
+            # In production, you'd host the audio file and use <Play>
+            response.say(message, voice="Polly.Amy", language="en-GB")
+            
+            return PlainTextResponse(content=str(response), media_type="application/xml")
+    
+    except Exception as e:
+        logger.error(f"ElevenLabs error: {str(e)}")
+    
+    # Fallback to Twilio's built-in TTS
+    response = VoiceResponse()
+    response.say(message, voice="Polly.Amy", language="en-GB")
+    
+    return PlainTextResponse(content=str(response), media_type="application/xml")
+
+@api_router.post("/call/status/{call_id}")
+async def call_status_callback(call_id: str, request: Request):
+    """Handle call status updates from Twilio"""
+    
+    form_data = await request.form()
+    call_status = form_data.get("CallStatus", "unknown")
+    call_duration = form_data.get("CallDuration", "0")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.call_logs.update_one(
+        {"id": call_id},
+        {"$set": {
+            "status": call_status,
+            "duration": int(call_duration),
+            "completed_at": now
+        }}
+    )
+    
+    # If call was longer than 1 minute, deduct additional minutes
+    duration_minutes = int(call_duration) // 60
+    if duration_minutes > 1:
+        call_data = await db.call_logs.find_one({"id": call_id}, {"_id": 0})
+        if call_data:
+            additional_minutes = duration_minutes - 1  # Already deducted 1 minute
+            await db.users.update_one(
+                {"id": call_data["user_id"]},
+                {"$inc": {"call_minutes_remaining": -additional_minutes}}
+            )
+    
+    return {"status": "received"}
+
+@api_router.get("/call/history")
+async def get_call_history(current_user: dict = Depends(get_current_user)):
+    """Get user's call history"""
+    calls = await db.call_logs.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return {"calls": calls}
+
+@api_router.get("/sms/history")
+async def get_sms_history(current_user: dict = Depends(get_current_user)):
+    """Get user's SMS history"""
+    messages = await db.sms_logs.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return {"messages": messages}
 
 # Include the router in the main app
 app.include_router(api_router)
