@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Toaster, toast } from 'sonner';
 import { 
@@ -16,7 +16,11 @@ import {
   Menu,
   X,
   Shield,
-  CheckCircle
+  CheckCircle,
+  CreditCard,
+  Zap,
+  Crown,
+  Check
 } from 'lucide-react';
 import './App.css';
 
@@ -593,6 +597,240 @@ const MemoryView = () => {
   );
 };
 
+// Subscription/Pricing View
+const SubscriptionView = () => {
+  const [plans, setPlans] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [processingPlan, setProcessingPlan] = useState(null);
+  const [billingCycle, setBillingCycle] = useState('monthly');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [plansRes, subRes] = await Promise.all([
+        axios.get(`${API_URL}/api/plans`),
+        axios.get(`${API_URL}/api/subscription/status`)
+      ]);
+      setPlans(plansRes.data.plans);
+      setSubscription(subRes.data);
+    } catch (err) {
+      toast.error('Failed to load subscription data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (planId) => {
+    setProcessingPlan(planId);
+    try {
+      const res = await axios.post(`${API_URL}/api/checkout/create`, {
+        plan_id: planId,
+        origin_url: window.location.origin
+      });
+      
+      // Redirect to Stripe checkout
+      window.location.href = res.data.checkout_url;
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start checkout');
+      setProcessingPlan(null);
+    }
+  };
+
+  const getFilteredPlans = () => {
+    return plans.filter(plan => 
+      billingCycle === 'monthly' ? plan.interval === 'month' : plan.interval === 'year'
+    );
+  };
+
+  const getPlanIcon = (planId) => {
+    if (planId.includes('business')) return <Crown size={24} />;
+    if (planId.includes('pro')) return <Zap size={24} />;
+    return <Brain size={24} />;
+  };
+
+  if (loading) {
+    return <div className="loading">Loading plans...</div>;
+  }
+
+  return (
+    <div className="subscription-view">
+      <div className="subscription-header">
+        <h2><CreditCard size={24} /> Subscription</h2>
+        {subscription?.is_subscribed && (
+          <div className="current-plan-badge">
+            <CheckCircle size={16} />
+            {subscription.plan_name} Plan Active
+          </div>
+        )}
+      </div>
+
+      {subscription?.is_subscribed && (
+        <div className="subscription-status-card">
+          <h3>Your Current Plan: {subscription.plan_name}</h3>
+          <div className="usage-stats">
+            <div className="stat">
+              <Phone size={18} />
+              <span>{subscription.call_minutes_remaining} minutes remaining</span>
+            </div>
+            <div className="stat">
+              <MessageSquare size={18} />
+              <span>{subscription.texts_remaining} texts remaining</span>
+            </div>
+          </div>
+          <p className="renewal-date">
+            Renews: {new Date(subscription.subscription_ends_at).toLocaleDateString()}
+          </p>
+        </div>
+      )}
+
+      <div className="billing-toggle">
+        <button 
+          className={billingCycle === 'monthly' ? 'active' : ''}
+          onClick={() => setBillingCycle('monthly')}
+          data-testid="billing-monthly"
+        >
+          Monthly
+        </button>
+        <button 
+          className={billingCycle === 'annual' ? 'active' : ''}
+          onClick={() => setBillingCycle('annual')}
+          data-testid="billing-annual"
+        >
+          Annual <span className="save-badge">Save 17%</span>
+        </button>
+      </div>
+
+      <div className="plans-grid">
+        {getFilteredPlans().map(plan => (
+          <div 
+            key={plan.id} 
+            className={`plan-card ${plan.id.includes('pro') ? 'popular' : ''}`}
+            data-testid={`plan-${plan.id}`}
+          >
+            {plan.id.includes('pro') && <div className="popular-badge">Most Popular</div>}
+            
+            <div className="plan-icon">
+              {getPlanIcon(plan.id)}
+            </div>
+            
+            <h3>{plan.name.replace(' (Annual)', '')}</h3>
+            
+            <div className="plan-price">
+              <span className="currency">£</span>
+              <span className="amount">{plan.price.toFixed(0)}</span>
+              <span className="period">/{plan.interval === 'year' ? 'year' : 'mo'}</span>
+            </div>
+
+            <ul className="plan-features">
+              {plan.features.map((feature, idx) => (
+                <li key={idx}>
+                  <Check size={16} />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => handleSubscribe(plan.id)}
+              disabled={processingPlan === plan.id || (subscription?.plan === plan.id)}
+              className="subscribe-btn"
+              data-testid={`subscribe-${plan.id}`}
+            >
+              {processingPlan === plan.id ? 'Processing...' : 
+               subscription?.plan === plan.id ? 'Current Plan' : 'Subscribe'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Subscription Success Page
+const SubscriptionSuccess = () => {
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState('checking');
+  const [attempts, setAttempts] = useState(0);
+  const navigate = useNavigate();
+  const sessionId = searchParams.get('session_id');
+
+  useEffect(() => {
+    if (sessionId) {
+      pollPaymentStatus();
+    }
+  }, [sessionId]);
+
+  const pollPaymentStatus = async () => {
+    if (attempts >= 5) {
+      setStatus('timeout');
+      return;
+    }
+
+    try {
+      const res = await axios.get(`${API_URL}/api/checkout/status/${sessionId}`);
+      
+      if (res.data.payment_status === 'paid') {
+        setStatus('success');
+        toast.success('Payment successful! Welcome to AI Helper Pro!');
+        setTimeout(() => navigate('/'), 3000);
+      } else {
+        setAttempts(prev => prev + 1);
+        setTimeout(pollPaymentStatus, 2000);
+      }
+    } catch (err) {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="subscription-success">
+      <div className="success-container">
+        {status === 'checking' && (
+          <>
+            <Brain size={64} className="spin" />
+            <h2>Processing your payment...</h2>
+            <p>Please wait while we confirm your subscription.</p>
+          </>
+        )}
+        
+        {status === 'success' && (
+          <>
+            <CheckCircle size={64} className="success-icon" />
+            <h2>Payment Successful!</h2>
+            <p>Welcome to AI Helper! Redirecting you to your dashboard...</p>
+          </>
+        )}
+        
+        {status === 'error' && (
+          <>
+            <X size={64} className="error-icon" />
+            <h2>Something went wrong</h2>
+            <p>Please contact support if you were charged.</p>
+            <button onClick={() => navigate('/')} className="back-btn">
+              Go to Dashboard
+            </button>
+          </>
+        )}
+        
+        {status === 'timeout' && (
+          <>
+            <Brain size={64} />
+            <h2>Taking longer than expected</h2>
+            <p>Your payment may still be processing. Check your email for confirmation.</p>
+            <button onClick={() => navigate('/')} className="back-btn">
+              Go to Dashboard
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Main Dashboard
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('chat');
@@ -613,6 +851,8 @@ const Dashboard = () => {
         return <ContactsView />;
       case 'memory':
         return <MemoryView />;
+      case 'subscription':
+        return <SubscriptionView />;
       default:
         return <ChatView />;
     }
@@ -658,6 +898,14 @@ const Dashboard = () => {
           >
             <Brain size={20} />
             Memory
+          </button>
+          <button
+            className={activeView === 'subscription' ? 'active' : ''}
+            onClick={() => { setActiveView('subscription'); setSidebarOpen(false); }}
+            data-testid="nav-subscription"
+          >
+            <CreditCard size={20} />
+            Subscription
           </button>
         </nav>
 
@@ -712,6 +960,11 @@ function App() {
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/disclosure" element={<DisclosurePage />} />
+          <Route path="/subscription/success" element={
+            <ProtectedRoute>
+              <SubscriptionSuccess />
+            </ProtectedRoute>
+          } />
           <Route
             path="/*"
             element={

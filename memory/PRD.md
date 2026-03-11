@@ -43,32 +43,27 @@ Build an AI helper with:
 - ✅ Mobile-responsive design
 - ✅ Dark theme UI
 
-### API Endpoints:
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Get current user
-- `POST /api/disclosure/accept` - Accept terms
-- `GET /api/disclosure/status` - Check disclosure status
-- `POST /api/chat` - Send message to AI
-- `GET /api/chat/history` - Get conversation history
-- `GET /api/chat/sessions` - List chat sessions
-- `GET /api/memory` - List user memories
-- `POST /api/memory` - Add memory
-- `DELETE /api/memory/{id}` - Delete memory
-- `GET /api/contacts` - List contacts
-- `POST /api/contacts` - Add contact
-- `DELETE /api/contacts/{id}` - Delete contact
-
 ---
 
-## Phase 2 - Stripe Subscriptions (PENDING)
-### Features to Build:
-- [ ] Stripe checkout integration
-- [ ] Subscription plans (Basic, Pro, etc.)
-- [ ] Billing management page
-- [ ] Admin: View subscribers and revenue
-- [ ] Free tier with limited usage
-- [ ] Upgrade prompts
+## Phase 2 - Stripe Subscriptions (COMPLETED ✅)
+**Status**: Implemented and Tested
+**Date**: March 11, 2025
+
+### Implemented Features:
+- ✅ Subscription plans page with pricing
+- ✅ Three tiers: Starter (£19), Pro (£39), Business (£69)
+- ✅ Monthly and Annual billing options (17% discount for annual)
+- ✅ Stripe checkout integration
+- ✅ Payment status polling
+- ✅ Subscription status tracking
+- ✅ Usage limits (call minutes, texts) per tier
+
+### Subscription Tiers:
+| Plan | Monthly | Annual | Call Minutes | Texts |
+|------|---------|--------|--------------|-------|
+| Starter | £19 | £190 | 0 | 0 |
+| Pro | £39 | £390 | 60/month | 100/month |
+| Business | £69 | £690 | 180/month | 300/month |
 
 ---
 
@@ -94,12 +89,46 @@ Build an AI helper with:
 
 ---
 
-## Phase 5 - Appointment Keeper Integration (PENDING)
+## Phase 5 - Keeper Assistant (WordPress Widget) (PENDING)
 ### Features to Build:
+- [ ] Separate branding ("Keeper Assistant")
 - [ ] Embeddable widget for WordPress/Amelia
-- [ ] Zapier integration for automations
+- [ ] Limited feature set (appointment-focused only)
+- [ ] Different styling to match Appointment Keeper
 - [ ] Upsell flow for Appointment Keeper customers
-- [ ] Separate pricing for add-on tier
+
+---
+
+## API Endpoints
+
+### Auth
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Get current user
+
+### Disclosure
+- `POST /api/disclosure/accept` - Accept terms
+- `GET /api/disclosure/status` - Check disclosure status
+
+### Chat
+- `POST /api/chat` - Send message to AI
+- `GET /api/chat/history` - Get conversation history
+- `GET /api/chat/sessions` - List chat sessions
+
+### Memory & Contacts
+- `GET /api/memory` - List user memories
+- `POST /api/memory` - Add memory
+- `DELETE /api/memory/{id}` - Delete memory
+- `GET /api/contacts` - List contacts
+- `POST /api/contacts` - Add contact
+- `DELETE /api/contacts/{id}` - Delete contact
+
+### Subscriptions
+- `GET /api/plans` - Get all subscription plans
+- `POST /api/checkout/create` - Create Stripe checkout session
+- `GET /api/checkout/status/{session_id}` - Check payment status
+- `GET /api/subscription/status` - Get user's subscription status
+- `POST /api/webhook/stripe` - Stripe webhook handler
 
 ---
 
@@ -112,11 +141,7 @@ EMERGENT_LLM_KEY=sk-emergent-xxx
 TWILIO_ACCOUNT_SID=ACxxx
 TWILIO_AUTH_TOKEN=xxx
 ELEVENLABS_API_KEY=sk_xxx
-```
-
-### Frontend (.env)
-```
-REACT_APP_BACKEND_URL=https://xxx.preview.emergentagent.com
+STRIPE_API_KEY=sk_test_xxx
 ```
 
 ---
@@ -126,6 +151,7 @@ REACT_APP_BACKEND_URL=https://xxx.preview.emergentagent.com
 - `conversations` - Chat history
 - `memories` - Stored user information
 - `contacts` - User's contact list
+- `payment_transactions` - Stripe payment records
 
 ---
 
@@ -135,4 +161,5 @@ REACT_APP_BACKEND_URL=https://xxx.preview.emergentagent.com
 ## Notes
 - All keys are configured and working
 - GPT-5.2 responding correctly with memory context
+- Stripe checkout returns valid URLs
 - Mobile responsive design implemented

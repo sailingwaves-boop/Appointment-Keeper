@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -7,12 +7,13 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -109,6 +110,85 @@ class MemoryItem(BaseModel):
     category: str
     created_at: str
     updated_at: str
+
+# ============== SUBSCRIPTION PLANS ==============
+
+SUBSCRIPTION_PLANS = {
+    "starter_monthly": {
+        "id": "starter_monthly",
+        "name": "Starter",
+        "price": 19.00,
+        "currency": "gbp",
+        "interval": "month",
+        "call_minutes": 0,
+        "texts": 0,
+        "features": ["Unlimited AI chat", "Persistent memory", "Contact management"]
+    },
+    "starter_annual": {
+        "id": "starter_annual",
+        "name": "Starter (Annual)",
+        "price": 190.00,
+        "currency": "gbp",
+        "interval": "year",
+        "call_minutes": 0,
+        "texts": 0,
+        "features": ["Unlimited AI chat", "Persistent memory", "Contact management", "2 months free"]
+    },
+    "pro_monthly": {
+        "id": "pro_monthly",
+        "name": "Pro",
+        "price": 39.00,
+        "currency": "gbp",
+        "interval": "month",
+        "call_minutes": 60,
+        "texts": 100,
+        "features": ["Everything in Starter", "60 call minutes/month", "100 texts/month", "Priority support"]
+    },
+    "pro_annual": {
+        "id": "pro_annual",
+        "name": "Pro (Annual)",
+        "price": 390.00,
+        "currency": "gbp",
+        "interval": "year",
+        "call_minutes": 60,
+        "texts": 100,
+        "features": ["Everything in Starter", "60 call minutes/month", "100 texts/month", "Priority support", "2 months free"]
+    },
+    "business_monthly": {
+        "id": "business_monthly",
+        "name": "Business",
+        "price": 69.00,
+        "currency": "gbp",
+        "interval": "month",
+        "call_minutes": 180,
+        "texts": 300,
+        "features": ["Everything in Pro", "180 call minutes/month", "300 texts/month", "API access", "Dedicated support"]
+    },
+    "business_annual": {
+        "id": "business_annual",
+        "name": "Business (Annual)",
+        "price": 690.00,
+        "currency": "gbp",
+        "interval": "year",
+        "call_minutes": 180,
+        "texts": 300,
+        "features": ["Everything in Pro", "180 call minutes/month", "300 texts/month", "API access", "Dedicated support", "2 months free"]
+    }
+}
+
+class CheckoutRequest(BaseModel):
+    plan_id: str
+    origin_url: str
+
+class SubscriptionStatusResponse(BaseModel):
+    is_subscribed: bool
+    plan: Optional[str] = None
+    plan_name: Optional[str] = None
+    interval: Optional[str] = None
+    call_minutes_remaining: int = 0
+    texts_remaining: int = 0
+    subscription_started_at: Optional[str] = None
+    subscription_ends_at: Optional[str] = None
 
 # ============== AUTH HELPERS ==============
 
@@ -423,6 +503,214 @@ async def delete_contact(contact_id: str, current_user: dict = Depends(get_curre
 @api_router.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "AI Helper API"}
+
+# ============== SUBSCRIPTION ROUTES ==============
+
+@api_router.get("/plans")
+async def get_plans():
+    """Get all available subscription plans"""
+    return {"plans": list(SUBSCRIPTION_PLANS.values())}
+
+@api_router.post("/checkout/create")
+async def create_checkout(request: CheckoutRequest, http_request: Request, current_user: dict = Depends(get_current_user)):
+    """Create a Stripe checkout session for subscription"""
+    
+    # Validate plan exists
+    if request.plan_id not in SUBSCRIPTION_PLANS:
+        raise HTTPException(status_code=400, detail="Invalid plan selected")
+    
+    plan = SUBSCRIPTION_PLANS[request.plan_id]
+    
+    # Initialize Stripe
+    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    webhook_url = f"{request.origin_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
+    
+    # Create URLs
+    success_url = f"{request.origin_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{request.origin_url}/subscription"
+    
+    # Create checkout session
+    try:
+        checkout_request = CheckoutSessionRequest(
+            amount=plan["price"],
+            currency=plan["currency"],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": current_user["id"],
+                "user_email": current_user["email"],
+                "plan_id": request.plan_id,
+                "plan_name": plan["name"]
+            }
+        )
+        
+        session = await stripe_checkout.create_checkout_session(checkout_request)
+        
+        # Store transaction in database
+        now = datetime.now(timezone.utc).isoformat()
+        transaction_doc = {
+            "id": str(uuid.uuid4()),
+            "session_id": session.session_id,
+            "user_id": current_user["id"],
+            "user_email": current_user["email"],
+            "plan_id": request.plan_id,
+            "amount": plan["price"],
+            "currency": plan["currency"],
+            "payment_status": "pending",
+            "created_at": now,
+            "updated_at": now
+        }
+        await db.payment_transactions.insert_one(transaction_doc)
+        
+        return {"checkout_url": session.url, "session_id": session.session_id}
+        
+    except Exception as e:
+        logger.error(f"Checkout error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create checkout: {str(e)}")
+
+@api_router.get("/checkout/status/{session_id}")
+async def get_checkout_status(session_id: str, current_user: dict = Depends(get_current_user)):
+    """Check the status of a checkout session and update subscription if paid"""
+    
+    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+    
+    try:
+        status = await stripe_checkout.get_checkout_status(session_id)
+        
+        # Find the transaction
+        transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        
+        # Check if already processed
+        if transaction.get("payment_status") == "paid":
+            return {
+                "status": status.status,
+                "payment_status": status.payment_status,
+                "already_processed": True
+            }
+        
+        # If payment successful, update user subscription
+        if status.payment_status == "paid":
+            now = datetime.now(timezone.utc).isoformat()
+            plan_id = transaction.get("plan_id")
+            plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+            
+            # Calculate subscription end date
+            if "annual" in plan_id:
+                end_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+            else:
+                end_date = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+            
+            # Update user subscription
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {
+                    "is_subscribed": True,
+                    "subscription_tier": plan_id,
+                    "subscription_started_at": now,
+                    "subscription_ends_at": end_date,
+                    "call_minutes_remaining": plan.get("call_minutes", 0),
+                    "texts_remaining": plan.get("texts", 0),
+                    "usage_reset_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                }}
+            )
+            
+            # Update transaction status
+            await db.payment_transactions.update_one(
+                {"session_id": session_id},
+                {"$set": {"payment_status": "paid", "updated_at": now}}
+            )
+        
+        return {
+            "status": status.status,
+            "payment_status": status.payment_status,
+            "amount_total": status.amount_total,
+            "currency": status.currency
+        }
+        
+    except Exception as e:
+        logger.error(f"Status check error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
+
+@api_router.get("/subscription/status", response_model=SubscriptionStatusResponse)
+async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Get current user's subscription status"""
+    
+    is_subscribed = current_user.get("is_subscribed", False)
+    plan_id = current_user.get("subscription_tier")
+    plan = SUBSCRIPTION_PLANS.get(plan_id, {}) if plan_id else {}
+    
+    return SubscriptionStatusResponse(
+        is_subscribed=is_subscribed,
+        plan=plan_id,
+        plan_name=plan.get("name"),
+        interval=plan.get("interval"),
+        call_minutes_remaining=current_user.get("call_minutes_remaining", 0),
+        texts_remaining=current_user.get("texts_remaining", 0),
+        subscription_started_at=current_user.get("subscription_started_at"),
+        subscription_ends_at=current_user.get("subscription_ends_at")
+    )
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events"""
+    try:
+        body = await request.body()
+        signature = request.headers.get("Stripe-Signature", "")
+        
+        stripe_api_key = os.environ.get('STRIPE_API_KEY')
+        stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+        
+        webhook_response = await stripe_checkout.handle_webhook(body, signature)
+        
+        logger.info(f"Webhook received: {webhook_response.event_type}")
+        
+        # Handle checkout.session.completed event
+        if webhook_response.event_type == "checkout.session.completed":
+            session_id = webhook_response.session_id
+            metadata = webhook_response.metadata
+            
+            if metadata and metadata.get("user_id"):
+                user_id = metadata["user_id"]
+                plan_id = metadata.get("plan_id")
+                plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+                now = datetime.now(timezone.utc).isoformat()
+                
+                # Calculate subscription end date
+                if plan_id and "annual" in plan_id:
+                    end_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+                else:
+                    end_date = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                
+                # Update user subscription
+                await db.users.update_one(
+                    {"id": user_id},
+                    {"$set": {
+                        "is_subscribed": True,
+                        "subscription_tier": plan_id,
+                        "subscription_started_at": now,
+                        "subscription_ends_at": end_date,
+                        "call_minutes_remaining": plan.get("call_minutes", 0),
+                        "texts_remaining": plan.get("texts", 0),
+                        "usage_reset_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                    }}
+                )
+                
+                # Update transaction
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id},
+                    {"$set": {"payment_status": "paid", "updated_at": now}}
+                )
+        
+        return {"status": "received"}
+        
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 # Include the router in the main app
 app.include_router(api_router)
