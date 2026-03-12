@@ -1,0 +1,28 @@
+INTEGRATION INFO FOR APPOINTMENTKEEPER
+
+Credit Manager plugin has REST API for external services like Zapier.
+
+API Endpoint: /wp-json/ak-credit/v1/deduct
+Method: POST
+Authentication: X-API-Key header
+
+Request body:
+- email: customer email address
+- credit_type: sms, call, or email
+- amount: number of credits to deduct
+- reason: optional description
+
+Response returns:
+- success: true/false
+- balance_after: new credit balance
+- low_balance_warning: true if credits running low
+
+Four plugins built:
+1. AK Debt Ledger - customers track debts owed to them
+2. AK Credit Manager - admin manages customer credits with Zapier API
+3. AK Customer Dashboard - customer page at /my-dashboard
+4. Shows appointments, debts, credits, referrals in one place
+
+All code saved to GitHub.
+
+The helper needs to work with this credit system so when it sends SMS or makes calls, credits are deducted via the API.
