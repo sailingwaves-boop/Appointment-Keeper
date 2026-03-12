@@ -144,8 +144,8 @@ const AuthPage = () => {
       <div className="auth-container">
         <div className="auth-header">
           <Brain className="auth-logo" />
-          <h1>AI Helper</h1>
-          <p>Your personal AI assistant with unlimited memory</p>
+          <h1>Chronicle</h1>
+          <p>The AI that never forgets</p>
         </div>
 
         <button 
@@ -310,13 +310,13 @@ const DisclosurePage = () => {
         <div className="disclosure-header">
           <Shield className="disclosure-icon" />
           <h1>Terms & Disclosure</h1>
-          <p>Please read and accept before using AI Helper</p>
+          <p>Please read and accept before using Chronicle</p>
         </div>
 
         <div className="disclosure-content">
           <h2>Data Storage & Privacy</h2>
           <ul>
-            <li>AI Helper stores your conversations and personal information to provide persistent memory features.</li>
+            <li>Chronicle stores your conversations and personal information to provide persistent memory features.</li>
             <li>Your data is stored securely and is only accessible by you.</li>
             <li>We do not sell or share your personal information with third parties.</li>
             <li>You can delete your data at any time from the settings page.</li>
@@ -324,16 +324,16 @@ const DisclosurePage = () => {
 
           <h2>AI Limitations</h2>
           <ul>
-            <li>AI Helper is an artificial intelligence and may make mistakes.</li>
+            <li>Chronicle is an artificial intelligence and may make mistakes.</li>
             <li>Always verify important information independently.</li>
-            <li>Do not rely on AI Helper for medical, legal, or financial advice.</li>
+            <li>Do not rely on Chronicle for medical, legal, or financial advice.</li>
           </ul>
 
           <h2>Phone & Messaging Features</h2>
           <ul>
             <li>If you use phone/SMS features, standard carrier rates may apply.</li>
             <li>You are responsible for ensuring you have consent to contact others.</li>
-            <li>AI Helper will send messages and make calls on your behalf as instructed.</li>
+            <li>Chronicle will send messages and make calls on your behalf as instructed.</li>
           </ul>
 
           <h2>Subscription & Billing</h2>
@@ -422,7 +422,7 @@ const ChatView = () => {
   return (
     <div className="chat-view">
       <div className="chat-header">
-        <h2>Chat with AI Helper</h2>
+        <h2>Chat with Chronicle</h2>
         <button onClick={startNewChat} className="new-chat-btn" data-testid="new-chat-btn">
           <Plus size={18} />
           New Chat
@@ -434,7 +434,7 @@ const ChatView = () => {
           <div className="empty-chat">
             <Brain size={48} />
             <h3>Hello, {user?.name}!</h3>
-            <p>I'm your AI Helper with permanent memory. I can help you with:</p>
+            <p>I'm Chronicle, your AI with permanent memory. I can help you with:</p>
             <ul>
               <li>Coding and technical problems</li>
               <li>Planning and organization</li>
@@ -1154,7 +1154,7 @@ const SubscriptionSuccess = () => {
       
       if (res.data.payment_status === 'paid') {
         setStatus('success');
-        toast.success('Payment successful! Welcome to AI Helper Pro!');
+        toast.success('Payment successful! Welcome to Chronicle Pro!');
         setTimeout(() => navigate('/'), 3000);
       } else {
         setAttempts(prev => prev + 1);
@@ -1180,7 +1180,7 @@ const SubscriptionSuccess = () => {
           <>
             <CheckCircle size={64} className="success-icon" />
             <h2>Payment Successful!</h2>
-            <p>Welcome to AI Helper! Redirecting you to your dashboard...</p>
+            <p>Welcome to Chronicle! Redirecting you to your dashboard...</p>
           </>
         )}
         
@@ -1252,7 +1252,7 @@ const Dashboard = () => {
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <Brain size={32} />
-          <h1>AI Helper</h1>
+          <h1>Chronicle</h1>
         </div>
 
         <nav className="sidebar-nav">
@@ -1306,6 +1306,9 @@ const Dashboard = () => {
           <button onClick={handleLogout} className="logout-btn" data-testid="logout-btn">
             <LogOut size={20} />
           </button>
+        </div>
+        <div className="app-footer">
+          Chronicle - The AI that never forgets © 2026 Useful Gadgets Ltd
         </div>
       </aside>
 
