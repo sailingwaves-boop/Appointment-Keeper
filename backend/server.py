@@ -39,7 +39,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 # Create the main app
-app = FastAPI(title="AI Helper API")
+app = FastAPI(title="Chronicle API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -468,7 +468,7 @@ chat_sessions: dict = {}
 async def chat(request: ChatRequest, current_user: dict = Depends(get_current_user)):
     # Check disclosure
     if not current_user.get("disclosure_accepted", False):
-        raise HTTPException(status_code=403, detail="You must accept the disclosure before using the AI Helper")
+        raise HTTPException(status_code=403, detail="You must accept the disclosure before using Chronicle")
     
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
@@ -495,7 +495,7 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
                     contacts_context += f" ({contact['email']})"
                 contacts_context += "\n"
         
-        system_message = f"""You are AI Helper, a highly capable personal assistant with persistent memory. You help the user with anything they need - coding, planning, problem-solving, managing their business, and more.
+        system_message = f"""You are Chronicle, a highly capable personal assistant with persistent memory. You help the user with anything they need - coding, planning, problem-solving, managing their business, and more.
 
 You remember everything the user tells you. If they share personal information, preferences, or important details, acknowledge that you'll remember it.
 
@@ -556,7 +556,7 @@ User's name: {current_user['name']}"""
         
     except Exception as e:
         logger.error(f"Chat error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI Helper error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chronicle error: {str(e)}")
 
 @api_router.get("/chat/history")
 async def get_chat_history(session_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
@@ -645,7 +645,7 @@ async def delete_contact(contact_id: str, current_user: dict = Depends(get_curre
 
 @api_router.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "AI Helper API"}
+    return {"status": "healthy", "service": "Chronicle API"}
 
 # ============== SUBSCRIPTION ROUTES ==============
 
@@ -1007,7 +1007,7 @@ async def call_twiml(call_id: str):
         response.say("Sorry, there was an error with this call.")
         return PlainTextResponse(content=str(response), media_type="application/xml")
     
-    message = call_data.get("message", "Hello, this is a call from AI Helper.")
+    message = call_data.get("message", "Hello, this is a call from Chronicle.")
     
     # Generate speech using ElevenLabs
     try:
