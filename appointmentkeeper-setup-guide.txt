@@ -1,0 +1,85 @@
+APPOINTMENTKEEPER COMPLETE SETUP GUIDE
+======================================
+
+CUSTOMER DASHBOARD URL
+----------------------
+appointmentkeeper.co.uk/my-dashboard
+
+Every customer goes to this same URL. When they log in they see their own personal data.
+
+
+PLUGINS INSTALLED
+-----------------
+
+1. AK DEBT LEDGER
+   - Lets customers track debts owed to them
+   - Sends SMS and email reminders via Twilio/SendGrid
+   - Deducts credits when reminders are sent
+
+2. AK CREDIT MANAGER
+   - Admin tool to manage customer credit balances
+   - Has API for Zapier integration
+   - Four plans: Basic, Standard, Premium, Enterprise
+
+3. AK CUSTOMER DASHBOARD
+   - Creates the /my-dashboard page automatically
+   - Shows appointments, debts, credits, referrals in one place
+
+
+SHORTCODES
+----------
+Shortcodes are small codes you put inside any WordPress page to display features.
+
+[ak_customer_dashboard]
+- Displays the full customer dashboard
+- Already on the /my-dashboard page
+
+[ak_debt_ledger]
+- Displays the debt ledger on its own
+- Use if you want debts on a separate page
+
+[ameliacustomerpanel]
+- Amelia's own customer booking panel
+- Already embedded in the dashboard
+
+
+API FOR ZAPIER
+--------------
+Endpoint: appointmentkeeper.co.uk/wp-json/ak-credit/v1/deduct
+Method: POST
+Header: X-API-Key (found in Credit Manager > Settings)
+
+Body example:
+{
+  "email": "customer@example.com",
+  "credit_type": "sms",
+  "amount": 1,
+  "reason": "Appointment reminder"
+}
+
+
+SUBSCRIPTION PLANS (Default settings)
+-------------------------------------
+Basic:      50 SMS, 20 Calls, 100 Emails - £9.99/month
+Standard:   150 SMS, 50 Calls, 300 Emails - £24.99/month
+Premium:    500 SMS, 150 Calls, 1000 Emails - £49.99/month
+Enterprise: 2000 SMS, 500 Calls, 5000 Emails - £149.99/month
+
+Change these in Credit Manager > Settings
+
+
+WHERE TO CONFIGURE
+------------------
+Twilio/SendGrid API keys: Debt Ledger > Settings
+Credit plans and API key: Credit Manager > Settings
+Amelia bookings: Amelia > Settings
+
+
+CUSTOMER JOURNEY
+----------------
+1. Customer signs up on your site
+2. They pick a subscription plan
+3. They get credits added to their account
+4. They log in and go to /my-dashboard
+5. They see appointments, can track debts, send reminders
+6. Each reminder uses credits from their balance
