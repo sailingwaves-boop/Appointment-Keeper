@@ -1306,6 +1306,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve static frontend files (for Railway deployment)
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+static_path = Path(__file__).parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=static_path / "static"), name="static")
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Don't intercept API routes
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        
+        file_path = static_path / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(static_path / "index.html")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
