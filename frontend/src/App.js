@@ -256,11 +256,17 @@ const AuthCallback = () => {
       const sessionId = sessionIdMatch[1];
 
       try {
-        await loginWithGoogle(sessionId);
+        const result = await loginWithGoogle(sessionId);
         toast.success('Welcome!');
-        // Clear the hash and navigate to home
+        // Clear the hash
         window.history.replaceState(null, '', window.location.pathname);
-        navigate('/');
+        
+        // Check if user needs to accept disclosure
+        if (!result.user.disclosure_accepted) {
+          navigate('/disclosure');
+        } else {
+          navigate('/');
+        }
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Google sign-in failed');
         navigate('/auth');
@@ -364,6 +370,161 @@ const DisclosurePage = () => {
             {submitting ? 'Processing...' : 'Accept & Continue'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Trial Setup Page - Collect card details before using the app
+const TrialSetupPage = () => {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processingPlan, setProcessingPlan] = useState(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user already has card on file or is subscribed, redirect to dashboard
+    if (user?.card_on_file || user?.is_subscribed) {
+      navigate('/');
+      return;
+    }
+    fetchPlans();
+  }, [user, navigate]);
+
+  const fetchPlans = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/plans`);
+      // Only show monthly plans for trial setup
+      const monthlyPlans = res.data.plans.filter(p => p.interval === 'month');
+      setPlans(monthlyPlans);
+    } catch (err) {
+      toast.error('Failed to load plans');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartTrial = async (planId) => {
+    setProcessingPlan(planId);
+    try {
+      const res = await axios.post(`${API_URL}/api/trial/setup`, {
+        plan_id: planId,
+        origin_url: window.location.origin
+      });
+      
+      // Redirect to Stripe to collect card
+      window.location.href = res.data.checkout_url;
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start trial setup');
+      setProcessingPlan(null);
+    }
+  };
+
+  const getPlanIcon = (planId) => {
+    if (planId.includes('business')) return <Crown size={24} />;
+    if (planId.includes('pro')) return <Zap size={24} />;
+    return <Brain size={24} />;
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <Brain size={48} className="spin" />
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="trial-setup-page">
+      <div className="trial-setup-container">
+        <div className="trial-setup-header">
+          <Brain size={48} />
+          <h1>Choose Your Plan</h1>
+          <p>Select a subscription plan to get started with Chronicle</p>
+          <p className="trial-note">Secure payment powered by Stripe</p>
+        </div>
+
+        <div className="trial-plans-grid">
+          {plans.map(plan => (
+            <div key={plan.id} className={`trial-plan-card ${plan.id.includes('pro') ? 'featured' : ''}`}>
+              {plan.id.includes('pro') && <div className="popular-badge">Most Popular</div>}
+              <div className="plan-icon">{getPlanIcon(plan.id)}</div>
+              <h3>{plan.name}</h3>
+              <div className="plan-price">
+                <span className="amount">£{plan.price}</span>
+                <span className="period">/month</span>
+              </div>
+              <p className="after-trial">Billed monthly</p>
+              <ul className="plan-features">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx}><Check size={16} /> {feature}</li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleStartTrial(plan.id)}
+                disabled={processingPlan !== null}
+                className="trial-start-btn"
+                data-testid={`trial-start-${plan.id}`}
+              >
+                {processingPlan === plan.id ? 'Processing...' : 'Subscribe Now'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Trial Success Page
+const TrialSuccess = () => {
+  const [checking, setChecking] = useState(true);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { updateUser } = useAuth();
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    if (sessionId) {
+      checkTrialStatus(sessionId);
+    } else {
+      navigate('/trial-setup');
+    }
+  }, [searchParams, navigate]);
+
+  const checkTrialStatus = async (sessionId) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/trial/status/${sessionId}`);
+      
+      if (res.data.trial_active) {
+        updateUser({ 
+          card_on_file: true, 
+          is_subscribed: true,
+          trial_active: false 
+        });
+        toast.success('Subscription activated! Welcome to Chronicle.');
+        setTimeout(() => navigate('/'), 2000);
+      } else {
+        // Still processing
+        setTimeout(() => checkTrialStatus(sessionId), 2000);
+      }
+    } catch (err) {
+      toast.error('Failed to verify subscription status');
+      navigate('/trial-setup');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div className="success-page">
+      <div className="success-container">
+        <CheckCircle size={64} className="success-icon" />
+        <h1>Activating Your Subscription...</h1>
+        <p>Please wait while we set up your account</p>
+        {checking && <Brain size={32} className="spin" />}
       </div>
     </div>
   );
@@ -1425,6 +1586,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/disclosure" replace />;
   }
 
+  // Require card on file to access the app (unless already subscribed)
+  if (!user.card_on_file && !user.is_subscribed) {
+    return <Navigate to="/trial-setup" replace />;
+  }
+
   return children;
 };
 
@@ -1454,6 +1620,8 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/disclosure" element={<DisclosurePage />} />
+      <Route path="/trial-setup" element={<TrialSetupPage />} />
+      <Route path="/trial/success" element={<TrialSuccess />} />
       <Route path="/subscription/success" element={
         <ProtectedRoute>
           <SubscriptionSuccess />

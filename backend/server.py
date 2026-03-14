@@ -21,6 +21,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 from elevenlabs import ElevenLabs
 import base64
 import asyncio
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -72,6 +73,7 @@ class UserResponse(BaseModel):
     is_subscribed: bool = False
     trial_ends_at: Optional[str] = None
     trial_active: bool = False
+    card_on_file: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -189,6 +191,10 @@ class CheckoutRequest(BaseModel):
     plan_id: str
     origin_url: str
 
+class TrialSetupRequest(BaseModel):
+    plan_id: str
+    origin_url: str
+
 class SubscriptionStatusResponse(BaseModel):
     is_subscribed: bool
     plan: Optional[str] = None
@@ -198,6 +204,8 @@ class SubscriptionStatusResponse(BaseModel):
     texts_remaining: int = 0
     subscription_started_at: Optional[str] = None
     subscription_ends_at: Optional[str] = None
+    trial_ends_at: Optional[str] = None
+    card_on_file: bool = False
 
 class GoogleSessionRequest(BaseModel):
     session_id: str
@@ -334,7 +342,8 @@ async def register(user_data: UserCreate):
         disclosure_accepted=False,
         is_subscribed=False,
         trial_ends_at=user_doc["trial_ends_at"],
-        trial_active=True
+        trial_active=True,
+        card_on_file=False
     )
     
     return TokenResponse(access_token=access_token, user=user_response)
@@ -358,7 +367,8 @@ async def login(credentials: UserLogin):
         disclosure_accepted=user.get("disclosure_accepted", False),
         is_subscribed=user.get("is_subscribed", False),
         trial_ends_at=get_trial_ends_at(user),
-        trial_active=is_trial_active(user)
+        trial_active=is_trial_active(user),
+        card_on_file=user.get("card_on_file", False)
     )
     
     return TokenResponse(access_token=access_token, user=user_response)
@@ -373,7 +383,8 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         disclosure_accepted=current_user.get("disclosure_accepted", False),
         is_subscribed=current_user.get("is_subscribed", False),
         trial_ends_at=get_trial_ends_at(current_user),
-        trial_active=is_trial_active(current_user)
+        trial_active=is_trial_active(current_user),
+        card_on_file=current_user.get("card_on_file", False)
     )
 
 # ============== GOOGLE OAUTH ROUTES ==============
@@ -462,7 +473,10 @@ async def google_session(request: GoogleSessionRequest):
             name=user["name"],
             created_at=user["created_at"],
             disclosure_accepted=user.get("disclosure_accepted", False),
-            is_subscribed=user.get("is_subscribed", False)
+            is_subscribed=user.get("is_subscribed", False),
+            trial_ends_at=get_trial_ends_at(user),
+            trial_active=is_trial_active(user),
+            card_on_file=user.get("card_on_file", False)
         )
     }
 
@@ -754,6 +768,139 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
         logger.error(f"Checkout error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create checkout: {str(e)}")
 
+@api_router.post("/trial/setup")
+async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict = Depends(get_current_user)):
+    """Create a Stripe checkout session for subscription (first payment starts trial)"""
+    
+    # Validate plan exists
+    if request.plan_id not in SUBSCRIPTION_PLANS:
+        raise HTTPException(status_code=400, detail="Invalid plan selected")
+    
+    plan = SUBSCRIPTION_PLANS[request.plan_id]
+    
+    # Initialize Stripe checkout using emergentintegrations (works with test key)
+    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    webhook_url = f"{request.origin_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
+    
+    # Create URLs
+    success_url = f"{request.origin_url}/trial/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{request.origin_url}/trial-setup"
+    
+    try:
+        # Create checkout session
+        checkout_request = CheckoutSessionRequest(
+            amount=plan["price"],
+            currency=plan["currency"],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": current_user["id"],
+                "user_email": current_user["email"],
+                "plan_id": request.plan_id,
+                "plan_name": plan["name"],
+                "is_trial_setup": "true"
+            }
+        )
+        
+        session = await stripe_checkout.create_checkout_session(checkout_request)
+        
+        # Store transaction in database
+        now = datetime.now(timezone.utc).isoformat()
+        transaction_doc = {
+            "id": str(uuid.uuid4()),
+            "session_id": session.session_id,
+            "user_id": current_user["id"],
+            "user_email": current_user["email"],
+            "plan_id": request.plan_id,
+            "amount": plan["price"],
+            "currency": plan["currency"],
+            "payment_status": "trial_pending",
+            "is_trial": True,
+            "created_at": now,
+            "updated_at": now
+        }
+        await db.payment_transactions.insert_one(transaction_doc)
+        
+        return {"checkout_url": session.url, "session_id": session.session_id}
+        
+    except Exception as e:
+        logger.error(f"Trial setup error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to setup trial: {str(e)}")
+
+@api_router.get("/trial/status/{session_id}")
+async def get_trial_status(session_id: str, current_user: dict = Depends(get_current_user)):
+    """Check trial setup status and activate subscription if paid"""
+    
+    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+    
+    try:
+        # Get checkout status
+        status = await stripe_checkout.get_checkout_status(session_id)
+        
+        # Find the transaction
+        transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        
+        # Check if already processed
+        if transaction.get("payment_status") == "paid":
+            return {
+                "status": "complete",
+                "trial_active": True,
+                "already_processed": True
+            }
+        
+        # If payment successful, activate subscription
+        if status.payment_status == "paid":
+            now = datetime.now(timezone.utc).isoformat()
+            plan_id = transaction.get("plan_id")
+            plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+            
+            # Calculate subscription end date
+            if "annual" in plan_id:
+                end_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+            else:
+                end_date = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+            
+            # Update user with subscription and card info
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {
+                    "is_subscribed": True,
+                    "subscription_tier": plan_id,
+                    "subscription_started_at": now,
+                    "subscription_ends_at": end_date,
+                    "card_on_file": True,
+                    "call_minutes_remaining": plan.get("call_minutes", 0),
+                    "texts_remaining": plan.get("texts", 0),
+                    "usage_reset_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                }}
+            )
+            
+            # Update transaction status
+            await db.payment_transactions.update_one(
+                {"session_id": session_id},
+                {"$set": {"payment_status": "paid", "updated_at": now}}
+            )
+            
+            return {
+                "status": "complete",
+                "trial_active": True,
+                "subscription_ends_at": end_date
+            }
+        
+        return {
+            "status": status.status,
+            "trial_active": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Trial status error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to check trial status: {str(e)}")
+
 @api_router.get("/checkout/status/{session_id}")
 async def get_checkout_status(session_id: str, current_user: dict = Depends(get_current_user)):
     """Check the status of a checkout session and update subscription if paid"""
@@ -837,7 +984,9 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         call_minutes_remaining=current_user.get("call_minutes_remaining", 0),
         texts_remaining=current_user.get("texts_remaining", 0),
         subscription_started_at=current_user.get("subscription_started_at"),
-        subscription_ends_at=current_user.get("subscription_ends_at")
+        subscription_ends_at=current_user.get("subscription_ends_at"),
+        trial_ends_at=current_user.get("trial_ends_at"),
+        card_on_file=current_user.get("card_on_file", False)
     )
 
 @api_router.post("/webhook/stripe")
