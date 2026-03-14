@@ -70,6 +70,8 @@ class UserResponse(BaseModel):
     created_at: str
     disclosure_accepted: bool = False
     is_subscribed: bool = False
+    trial_ends_at: Optional[str] = None
+    trial_active: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -237,6 +239,26 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def is_trial_active(user: dict) -> bool:
+    """Check if user's trial is still active"""
+    if user.get("is_subscribed"):
+        return False  # Subscribed users don't need trial
+    
+    trial_ends_at = user.get("trial_ends_at")
+    if not trial_ends_at:
+        return False
+    
+    if isinstance(trial_ends_at, str):
+        trial_ends_at = datetime.fromisoformat(trial_ends_at.replace('Z', '+00:00'))
+    if trial_ends_at.tzinfo is None:
+        trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+    
+    return datetime.now(timezone.utc) < trial_ends_at
+
+def get_trial_ends_at(user: dict) -> Optional[str]:
+    """Get formatted trial end date"""
+    return user.get("trial_ends_at")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
     
@@ -293,7 +315,10 @@ async def register(user_data: UserCreate):
         "disclosure_accepted_at": None,
         "is_subscribed": False,
         "subscription_tier": None,
-        "subscription_started_at": None
+        "subscription_started_at": None,
+        "trial_started_at": now,
+        "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "trial_used": False
     }
     
     await db.users.insert_one(user_doc)
@@ -307,7 +332,9 @@ async def register(user_data: UserCreate):
         name=user_data.name,
         created_at=now,
         disclosure_accepted=False,
-        is_subscribed=False
+        is_subscribed=False,
+        trial_ends_at=user_doc["trial_ends_at"],
+        trial_active=True
     )
     
     return TokenResponse(access_token=access_token, user=user_response)
@@ -329,7 +356,9 @@ async def login(credentials: UserLogin):
         name=user["name"],
         created_at=user["created_at"],
         disclosure_accepted=user.get("disclosure_accepted", False),
-        is_subscribed=user.get("is_subscribed", False)
+        is_subscribed=user.get("is_subscribed", False),
+        trial_ends_at=get_trial_ends_at(user),
+        trial_active=is_trial_active(user)
     )
     
     return TokenResponse(access_token=access_token, user=user_response)
@@ -342,7 +371,9 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         name=current_user["name"],
         created_at=current_user["created_at"],
         disclosure_accepted=current_user.get("disclosure_accepted", False),
-        is_subscribed=current_user.get("is_subscribed", False)
+        is_subscribed=current_user.get("is_subscribed", False),
+        trial_ends_at=get_trial_ends_at(current_user),
+        trial_active=is_trial_active(current_user)
     )
 
 # ============== GOOGLE OAUTH ROUTES ==============
@@ -385,8 +416,9 @@ async def google_session(request: GoogleSessionRequest):
             }}
         )
     else:
-        # Create new user
+        # Create new user with 7-day trial
         user_id = str(uuid.uuid4())
+        trial_ends = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
         user_doc = {
             "id": user_id,
             "email": email,
@@ -397,7 +429,10 @@ async def google_session(request: GoogleSessionRequest):
             "disclosure_accepted": False,
             "disclosure_accepted_at": None,
             "is_subscribed": False,
-            "auth_provider": "google"
+            "auth_provider": "google",
+            "trial_started_at": now,
+            "trial_ends_at": trial_ends,
+            "trial_used": False
         }
         await db.users.insert_one(user_doc)
     
@@ -469,6 +504,13 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     # Check disclosure
     if not current_user.get("disclosure_accepted", False):
         raise HTTPException(status_code=403, detail="You must accept the disclosure before using Chronicle")
+    
+    # Check if user has active subscription or trial
+    if not current_user.get("is_subscribed", False) and not is_trial_active(current_user):
+        raise HTTPException(
+            status_code=403, 
+            detail="Your free trial has ended. Please subscribe to continue using Chronicle. Your memories and data are preserved."
+        )
     
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())

@@ -983,6 +983,19 @@ const SubscriptionView = () => {
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
   const [billingCycle, setBillingCycle] = useState('monthly');
+  const { user } = useAuth();
+
+  // Calculate trial days remaining
+  const getTrialDaysRemaining = () => {
+    if (!user?.trial_ends_at) return 0;
+    const trialEnd = new Date(user.trial_ends_at);
+    const now = new Date();
+    const diffTime = trialEnd - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
+  const trialDaysRemaining = getTrialDaysRemaining();
 
   useEffect(() => {
     fetchData();
@@ -1046,6 +1059,36 @@ const SubscriptionView = () => {
           </div>
         )}
       </div>
+
+      {/* Trial Status Card */}
+      {user?.trial_active && !user?.is_subscribed && (
+        <div className="trial-status-card" data-testid="trial-status-card">
+          <div className="trial-status-header">
+            <Zap size={24} />
+            <h3>Free Trial Active</h3>
+          </div>
+          <p className="trial-days-left">
+            <strong>{trialDaysRemaining}</strong> day{trialDaysRemaining !== 1 ? 's' : ''} remaining
+          </p>
+          <p className="trial-info">
+            Subscribe now to keep your memories and continue using Chronicle after your trial ends.
+          </p>
+        </div>
+      )}
+
+      {/* Trial Expired Card */}
+      {!user?.trial_active && !user?.is_subscribed && (
+        <div className="trial-expired-card" data-testid="trial-expired-card">
+          <div className="trial-status-header">
+            <Shield size={24} />
+            <h3>Trial Ended</h3>
+          </div>
+          <p className="trial-info">
+            Your free trial has ended, but don't worry - all your memories and data are preserved. 
+            Subscribe to a plan below to continue using Chronicle.
+          </p>
+        </div>
+      )}
 
       {subscription?.is_subscribed && (
         <div className="subscription-status-card">
@@ -1222,6 +1265,20 @@ const Dashboard = () => {
     navigate('/auth');
   };
 
+  // Calculate days remaining in trial
+  const getTrialDaysRemaining = () => {
+    if (!user?.trial_ends_at) return 0;
+    const trialEnd = new Date(user.trial_ends_at);
+    const now = new Date();
+    const diffTime = trialEnd - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
+  const trialDaysRemaining = getTrialDaysRemaining();
+  const showTrialBanner = user?.trial_active && !user?.is_subscribed;
+  const showTrialExpiredBanner = !user?.trial_active && !user?.is_subscribed;
+
   const renderView = () => {
     switch (activeView) {
       case 'chat':
@@ -1313,6 +1370,34 @@ const Dashboard = () => {
       </aside>
 
       <main className="main-content">
+        {showTrialExpiredBanner && (
+          <div className="trial-banner trial-expired" data-testid="trial-expired-banner">
+            <div className="trial-banner-content">
+              <span>Your free trial has ended. Subscribe to continue using Chronicle - your memories are preserved!</span>
+              <button 
+                onClick={() => setActiveView('subscription')}
+                className="trial-subscribe-btn"
+                data-testid="trial-subscribe-btn"
+              >
+                Subscribe Now
+              </button>
+            </div>
+          </div>
+        )}
+        {showTrialBanner && (
+          <div className="trial-banner trial-active" data-testid="trial-active-banner">
+            <div className="trial-banner-content">
+              <span>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} left in your free trial</span>
+              <button 
+                onClick={() => setActiveView('subscription')}
+                className="trial-upgrade-btn"
+                data-testid="trial-upgrade-btn"
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        )}
         {renderView()}
       </main>
     </div>
