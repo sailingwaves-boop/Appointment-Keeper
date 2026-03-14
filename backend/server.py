@@ -126,7 +126,7 @@ SUBSCRIPTION_PLANS = {
     "starter_monthly": {
         "id": "starter_monthly",
         "name": "Starter",
-        "price": 19.00,
+        "price": 14.00,
         "currency": "gbp",
         "interval": "month",
         "call_minutes": 0,
@@ -136,7 +136,7 @@ SUBSCRIPTION_PLANS = {
     "starter_annual": {
         "id": "starter_annual",
         "name": "Starter (Annual)",
-        "price": 190.00,
+        "price": 140.00,
         "currency": "gbp",
         "interval": "year",
         "call_minutes": 0,
