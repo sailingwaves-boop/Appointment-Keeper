@@ -37,9 +37,10 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
+    // If returning from OAuth callback with code param, skip the /me check.
+    // AuthCallback will exchange the code and establish the session first.
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('code')) {
       setLoading(false);
       return;
     }
@@ -79,8 +80,11 @@ const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const loginWithGoogle = async (sessionId) => {
-    const res = await axios.post(`${API_URL}/api/auth/google/session`, { session_id: sessionId });
+  const loginWithGoogle = async (code, redirectUri) => {
+    const res = await axios.post(`${API_URL}/api/auth/google/token`, { 
+      code: code,
+      redirect_uri: redirectUri 
+    });
     localStorage.setItem('token', res.data.session_token);
     setToken(res.data.session_token);
     setUser(res.data.user);
@@ -134,9 +138,20 @@ const AuthPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    // Direct Google OAuth - YOUR credentials, YOUR branding
+    const clientId = 'REMOVED_CLIENT_ID';
+    const redirectUri = window.location.origin + '/auth/callback';
+    const scope = 'email profile';
+    
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${clientId}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(scope)}` +
+      `&access_type=offline` +
+      `&prompt=consent`;
+    
+    window.location.href = googleAuthUrl;
   };
 
   return (
@@ -235,6 +250,7 @@ const AuthPage = () => {
 const AuthCallback = () => {
   const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const hasProcessed = React.useRef(false);
 
   useEffect(() => {
@@ -243,23 +259,27 @@ const AuthCallback = () => {
     hasProcessed.current = true;
 
     const processCallback = async () => {
-      // Get session_id from URL hash
-      const hash = window.location.hash;
-      const sessionIdMatch = hash.match(/session_id=([^&]+)/);
+      // Get authorization code from URL query params (Google's response)
+      const code = searchParams.get('code');
+      const error = searchParams.get('error');
       
-      if (!sessionIdMatch) {
-        toast.error('Authentication failed - no session ID');
+      if (error) {
+        toast.error('Google sign-in was cancelled');
+        navigate('/auth');
+        return;
+      }
+      
+      if (!code) {
+        toast.error('Authentication failed - no authorization code');
         navigate('/auth');
         return;
       }
 
-      const sessionId = sessionIdMatch[1];
+      const redirectUri = window.location.origin + '/auth/callback';
 
       try {
-        const result = await loginWithGoogle(sessionId);
+        const result = await loginWithGoogle(code, redirectUri);
         toast.success('Welcome!');
-        // Clear the hash
-        window.history.replaceState(null, '', window.location.pathname);
         
         // Check if user needs to accept disclosure
         if (!result.user.disclosure_accepted) {
@@ -268,13 +288,14 @@ const AuthCallback = () => {
           navigate('/');
         }
       } catch (err) {
+        console.error('Google auth error:', err);
         toast.error(err.response?.data?.detail || 'Google sign-in failed');
         navigate('/auth');
       }
     };
 
     processCallback();
-  }, [loginWithGoogle, navigate]);
+  }, [loginWithGoogle, navigate, searchParams]);
 
   return (
     <div className="loading-screen">
@@ -1606,15 +1627,8 @@ function App() {
   );
 }
 
-// Separate component to handle routing with hash detection
+// Separate component to handle routing
 function AppRoutes() {
-  const location = window.location;
-  
-  // Check URL hash for session_id (Google OAuth callback)
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-  
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />

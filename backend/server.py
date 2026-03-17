@@ -389,28 +389,62 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 # ============== GOOGLE OAUTH ROUTES ==============
 
-@api_router.post("/auth/google/session")
-async def google_session(request: GoogleSessionRequest):
-    """Exchange Google OAuth session_id for user data and create session"""
+# Google OAuth Configuration - YOUR OWN CREDENTIALS
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'REMOVED_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'REMOVED_SECRET')
+
+class GoogleTokenRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+@api_router.post("/auth/google/token")
+async def google_token_exchange(request: GoogleTokenRequest):
+    """Exchange Google authorization code for user data and create session"""
     
-    # Call Emergent Auth to get session data
+    # Exchange authorization code for tokens
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": request.session_id}
+            # Exchange code for tokens
+            token_response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": request.code,
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": request.redirect_uri,
+                    "grant_type": "authorization_code"
+                }
             )
             
-            if response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session ID")
+            if token_response.status_code != 200:
+                logger.error(f"Google token error: {token_response.text}")
+                raise HTTPException(status_code=401, detail="Failed to exchange authorization code")
             
-            data = response.json()
+            tokens = token_response.json()
+            access_token = tokens.get("access_token")
+            
+            # Get user info from Google
+            userinfo_response = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            
+            if userinfo_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Failed to get user info from Google")
+            
+            data = userinfo_response.json()
+            
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Google auth error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to verify Google session")
+            raise HTTPException(status_code=500, detail="Failed to verify Google authorization")
     
     # Check if user exists
     email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="No email provided by Google")
+    
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
     
     now = datetime.now(timezone.utc).isoformat()
@@ -447,8 +481,8 @@ async def google_session(request: GoogleSessionRequest):
         }
         await db.users.insert_one(user_doc)
     
-    # Create session
-    session_token = data.get("session_token") or str(uuid.uuid4())
+    # Create session token
+    session_token = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     
     session_doc = {
@@ -479,6 +513,12 @@ async def google_session(request: GoogleSessionRequest):
             card_on_file=user.get("card_on_file", False)
         )
     }
+
+# Keep old endpoint for backwards compatibility but mark as deprecated
+@api_router.post("/auth/google/session")
+async def google_session(request: GoogleSessionRequest):
+    """DEPRECATED - Use /auth/google/token instead"""
+    raise HTTPException(status_code=410, detail="This endpoint is deprecated. Please update your app.")
 
 @api_router.post("/auth/logout")
 async def logout(current_user: dict = Depends(get_current_user)):
