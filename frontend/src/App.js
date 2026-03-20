@@ -25,6 +25,7 @@ import {
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 // Auth Context
 const AuthContext = createContext(null);
@@ -87,6 +88,14 @@ const AuthProvider = ({ children }) => {
     return res.data;
   };
 
+  const loginWithGoogleToken = async (idToken) => {
+    const res = await axios.post(`${API_URL}/api/auth/google/token`, { id_token: idToken });
+    localStorage.setItem('token', res.data.session_token);
+    setToken(res.data.session_token);
+    setUser(res.data.user);
+    return res.data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -99,7 +108,7 @@ const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, loginWithGoogle, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, loginWithGoogle, loginWithGoogleToken, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -112,8 +121,32 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { login, register } = useAuth();
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const { login, register, loginWithGoogleToken } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleCredential = React.useCallback(async (googleResponse) => {
+    const credential = googleResponse?.credential;
+    if (!credential) {
+      toast.error('Google sign-in failed: missing credential');
+      return;
+    }
+
+    setGoogleSubmitting(true);
+    try {
+      const result = await loginWithGoogleToken(credential);
+      toast.success('Welcome!');
+      if (!result.user.disclosure_accepted) {
+        navigate('/disclosure');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Google sign-in failed');
+    } finally {
+      setGoogleSubmitting(false);
+    }
+  }, [loginWithGoogleToken, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,9 +167,23 @@ const AuthPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    if (!GOOGLE_CLIENT_ID) {
+      toast.error('Google sign-in is not configured. Set REACT_APP_GOOGLE_CLIENT_ID.');
+      return;
+    }
+
+    const googleIdentity = window.google?.accounts?.id;
+    if (!googleIdentity) {
+      toast.error('Google sign-in is still loading. Please refresh and try again.');
+      return;
+    }
+
+    googleIdentity.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+      ux_mode: 'popup'
+    });
+    googleIdentity.prompt();
   };
 
   return (
@@ -153,6 +200,7 @@ const AuthPage = () => {
           className="google-btn"
           type="button"
           data-testid="google-login-btn"
+          disabled={googleSubmitting}
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
@@ -160,7 +208,7 @@ const AuthPage = () => {
             <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
             <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
           </svg>
-          Continue with Google
+          {googleSubmitting ? 'Signing in...' : 'Continue with Google'}
         </button>
 
         <div className="auth-divider">
