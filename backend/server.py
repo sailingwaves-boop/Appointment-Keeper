@@ -13,6 +13,8 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
@@ -210,6 +212,9 @@ class SubscriptionStatusResponse(BaseModel):
 class GoogleSessionRequest(BaseModel):
     session_id: str
 
+class GoogleTokenRequest(BaseModel):
+    id_token: str
+
 # ============== SMS & CALL MODELS ==============
 
 class SendSMSRequest(BaseModel):
@@ -388,6 +393,96 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     )
 
 # ============== GOOGLE OAUTH ROUTES ==============
+
+@api_router.post("/auth/google/token")
+async def google_token_sign_in(request: GoogleTokenRequest):
+    """Sign in with a Google ID token from Google Identity Services."""
+    google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    if not google_client_id:
+        raise HTTPException(status_code=500, detail="Google sign-in is not configured")
+
+    try:
+        token_data = google_id_token.verify_oauth2_token(
+            request.id_token,
+            google_requests.Request(),
+            google_client_id
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = token_data.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google account is missing an email")
+    if not token_data.get("email_verified", False):
+        raise HTTPException(status_code=401, detail="Google email is not verified")
+
+    name = token_data.get("name") or email.split("@")[0]
+    picture = token_data.get("picture")
+    google_sub = token_data.get("sub")
+
+    now = datetime.now(timezone.utc).isoformat()
+    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+
+    if existing_user:
+        user_id = existing_user["id"]
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "name": name,
+                "picture": picture,
+                "auth_provider": "google",
+                "google_sub": google_sub,
+                "last_login": now
+            }}
+        )
+    else:
+        user_id = str(uuid.uuid4())
+        trial_ends = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        user_doc = {
+            "id": user_id,
+            "email": email,
+            "name": name,
+            "picture": picture,
+            "google_sub": google_sub,
+            "password_hash": None,
+            "created_at": now,
+            "disclosure_accepted": False,
+            "disclosure_accepted_at": None,
+            "is_subscribed": False,
+            "auth_provider": "google",
+            "trial_started_at": now,
+            "trial_ends_at": trial_ends,
+            "trial_used": False
+        }
+        await db.users.insert_one(user_doc)
+
+    session_token = str(uuid.uuid4())
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    session_doc = {
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at,
+        "created_at": now
+    }
+
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one(session_doc)
+
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    return {
+        "session_token": session_token,
+        "user": UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            created_at=user["created_at"],
+            disclosure_accepted=user.get("disclosure_accepted", False),
+            is_subscribed=user.get("is_subscribed", False),
+            trial_ends_at=get_trial_ends_at(user),
+            trial_active=is_trial_active(user),
+            card_on_file=user.get("card_on_file", False)
+        )
+    }
 
 @api_router.post("/auth/google/session")
 async def google_session(request: GoogleSessionRequest):
