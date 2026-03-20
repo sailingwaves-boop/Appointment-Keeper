@@ -35,6 +35,10 @@ db = client[os.environ['DB_NAME']]
 SECRET_KEY = os.environ.get('SECRET_KEY', 'ai-helper-secret-key-change-in-production')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 days
+EMERGENT_AUTH_SESSION_DATA_URL = os.environ.get(
+    "EMERGENT_AUTH_SESSION_DATA_URL",
+    "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
@@ -397,20 +401,32 @@ async def google_session(request: GoogleSessionRequest):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": request.session_id}
+                EMERGENT_AUTH_SESSION_DATA_URL,
+                headers={"X-Session-ID": request.session_id},
+                timeout=15.0
             )
-            
-            if response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session ID")
-            
-            data = response.json()
-        except Exception as e:
-            logger.error(f"Google auth error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to verify Google session")
+        except httpx.HTTPError as e:
+            logger.error(f"Google auth provider request failed: {str(e)}")
+            raise HTTPException(status_code=502, detail="Failed to reach Google auth provider")
+
+    if response.status_code == 401:
+        raise HTTPException(status_code=401, detail="Invalid or expired Google session")
+    if response.status_code >= 500:
+        raise HTTPException(status_code=502, detail="Google auth provider error")
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to verify Google session")
+
+    try:
+        data = response.json()
+    except ValueError:
+        logger.error("Google auth provider returned invalid JSON")
+        raise HTTPException(status_code=502, detail="Invalid auth provider response")
     
     # Check if user exists
-    email = data.get("email")
+    email = (data.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account email is required")
+
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
     
     now = datetime.now(timezone.utc).isoformat()
