@@ -25,6 +25,12 @@ import {
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const getSessionIdFromLocation = (locationObj = window.location) => {
+  const hash = locationObj.hash?.startsWith('#') ? locationObj.hash.slice(1) : locationObj.hash || '';
+  const hashParams = new URLSearchParams(hash);
+  const queryParams = new URLSearchParams(locationObj.search || '');
+  return hashParams.get('session_id') || queryParams.get('session_id');
+};
 
 // Auth Context
 const AuthContext = createContext(null);
@@ -39,7 +45,7 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
     // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
+    if (getSessionIdFromLocation(window.location)) {
       setLoading(false);
       return;
     }
@@ -243,17 +249,13 @@ const AuthCallback = () => {
     hasProcessed.current = true;
 
     const processCallback = async () => {
-      // Get session_id from URL hash
-      const hash = window.location.hash;
-      const sessionIdMatch = hash.match(/session_id=([^&]+)/);
-      
-      if (!sessionIdMatch) {
+      const sessionId = getSessionIdFromLocation(window.location);
+
+      if (!sessionId) {
         toast.error('Authentication failed - no session ID');
         navigate('/auth');
         return;
       }
-
-      const sessionId = sessionIdMatch[1];
 
       try {
         const result = await loginWithGoogle(sessionId);
@@ -1610,8 +1612,8 @@ function App() {
 function AppRoutes() {
   const location = window.location;
   
-  // Check URL hash for session_id (Google OAuth callback)
-  if (location.hash?.includes('session_id=')) {
+  // Some OAuth providers return session_id in hash, others in query params.
+  if (getSessionIdFromLocation(location)) {
     return <AuthCallback />;
   }
   

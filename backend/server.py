@@ -8,7 +8,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional, Dict
+from typing import Any, List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
@@ -51,6 +51,18 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+DEFAULT_EMERGENT_OAUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+EMERGENT_OAUTH_SESSION_URLS = [
+    url.strip()
+    for url in os.environ.get(
+        "EMERGENT_OAUTH_SESSION_URLS",
+        os.environ.get("EMERGENT_OAUTH_SESSION_URL", DEFAULT_EMERGENT_OAUTH_SESSION_URL)
+    ).split(",")
+    if url.strip()
+]
+if not EMERGENT_OAUTH_SESSION_URLS:
+    EMERGENT_OAUTH_SESSION_URLS = [DEFAULT_EMERGENT_OAUTH_SESSION_URL]
 
 # ============== MODELS ==============
 
@@ -267,6 +279,68 @@ def get_trial_ends_at(user: dict) -> Optional[str]:
     """Get formatted trial end date"""
     return user.get("trial_ends_at")
 
+def _first_non_empty(*values: Optional[str]) -> Optional[str]:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+def extract_google_identity(session_data: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    session_obj = session_data.get("session") if isinstance(session_data.get("session"), dict) else {}
+    user_obj = session_data.get("user") if isinstance(session_data.get("user"), dict) else {}
+    profile_obj = session_data.get("profile") if isinstance(session_data.get("profile"), dict) else {}
+    session_user_obj = session_obj.get("user") if isinstance(session_obj.get("user"), dict) else {}
+    data_obj = session_data.get("data") if isinstance(session_data.get("data"), dict) else {}
+
+    identity_sources = [session_data, user_obj, profile_obj, session_user_obj, data_obj]
+
+    def pick(*keys: str) -> Optional[str]:
+        return _first_non_empty(
+            *[source.get(key) for source in identity_sources if isinstance(source, dict) for key in keys]
+        )
+
+    return {
+        "email": pick("email"),
+        "name": pick("name", "full_name", "given_name"),
+        "picture": pick("picture", "avatar_url", "avatar", "photo_url", "image"),
+        "session_token": _first_non_empty(
+            session_data.get("session_token"),
+            session_obj.get("session_token"),
+            session_data.get("token"),
+            session_obj.get("token"),
+            session_data.get("access_token")
+        )
+    }
+
+async def fetch_google_session_data(session_id: str) -> Dict[str, Any]:
+    errors: List[str] = []
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for session_url in EMERGENT_OAUTH_SESSION_URLS:
+            try:
+                response = await client.get(
+                    session_url,
+                    headers={"X-Session-ID": session_id}
+                )
+            except httpx.RequestError as exc:
+                errors.append(f"{session_url}: {exc.__class__.__name__}")
+                continue
+
+            if response.status_code == 200:
+                return response.json()
+
+            if response.status_code in {400, 401, 404}:
+                errors.append(f"{session_url}: {response.status_code}")
+                continue
+
+            errors.append(f"{session_url}: {response.status_code}")
+
+    if errors and all(err.endswith(": 400") or err.endswith(": 401") or err.endswith(": 404") for err in errors):
+        raise HTTPException(status_code=401, detail="Invalid or expired Google sign-in session")
+
+    logger.error("Google auth provider request failed across endpoints: %s", "; ".join(errors) or "unknown")
+    raise HTTPException(status_code=502, detail="Google auth provider unavailable. Please try again.")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
     
@@ -392,25 +466,20 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 @api_router.post("/auth/google/session")
 async def google_session(request: GoogleSessionRequest):
     """Exchange Google OAuth session_id for user data and create session"""
-    
-    # Call Emergent Auth to get session data
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": request.session_id}
-            )
-            
-            if response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session ID")
-            
-            data = response.json()
-        except Exception as e:
-            logger.error(f"Google auth error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to verify Google session")
-    
+
+    session_id = request.session_id.strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing Google session ID")
+
+    data = await fetch_google_session_data(session_id)
+    identity = extract_google_identity(data)
+
     # Check if user exists
-    email = data.get("email")
+    email = identity.get("email")
+    if not email:
+        logger.error("Google auth response missing email. Keys: %s", list(data.keys()))
+        raise HTTPException(status_code=502, detail="Google auth response missing email")
+
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
     
     now = datetime.now(timezone.utc).isoformat()
@@ -421,8 +490,8 @@ async def google_session(request: GoogleSessionRequest):
         await db.users.update_one(
             {"id": user_id},
             {"$set": {
-                "name": data.get("name", existing_user.get("name")),
-                "picture": data.get("picture"),
+                "name": identity.get("name") or existing_user.get("name"),
+                "picture": identity.get("picture"),
                 "last_login": now
             }}
         )
@@ -433,8 +502,8 @@ async def google_session(request: GoogleSessionRequest):
         user_doc = {
             "id": user_id,
             "email": email,
-            "name": data.get("name", ""),
-            "picture": data.get("picture"),
+            "name": identity.get("name") or "",
+            "picture": identity.get("picture"),
             "password_hash": None,  # No password for Google users
             "created_at": now,
             "disclosure_accepted": False,
@@ -448,7 +517,7 @@ async def google_session(request: GoogleSessionRequest):
         await db.users.insert_one(user_doc)
     
     # Create session
-    session_token = data.get("session_token") or str(uuid.uuid4())
+    session_token = identity.get("session_token") or str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     
     session_doc = {
