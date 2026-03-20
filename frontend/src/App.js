@@ -25,6 +25,16 @@ import {
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const EMERGENT_AUTH_URL = process.env.REACT_APP_EMERGENT_AUTH_URL || 'https://auth.emergentagent.com';
+
+const getOAuthSessionIdFromLocation = () => {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const hashSessionId = hashParams.get('session_id');
+  if (hashSessionId) return hashSessionId;
+
+  const queryParams = new URLSearchParams(window.location.search);
+  return queryParams.get('session_id');
+};
 
 // Auth Context
 const AuthContext = createContext(null);
@@ -39,7 +49,7 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
     // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
+    if (getOAuthSessionIdFromLocation()) {
       setLoading(false);
       return;
     }
@@ -136,7 +146,7 @@ const AuthPage = () => {
   const handleGoogleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `${EMERGENT_AUTH_URL}/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   return (
@@ -243,17 +253,14 @@ const AuthCallback = () => {
     hasProcessed.current = true;
 
     const processCallback = async () => {
-      // Get session_id from URL hash
-      const hash = window.location.hash;
-      const sessionIdMatch = hash.match(/session_id=([^&]+)/);
-      
-      if (!sessionIdMatch) {
+      // Support providers that return session_id in either hash or query params.
+      const sessionId = getOAuthSessionIdFromLocation();
+
+      if (!sessionId) {
         toast.error('Authentication failed - no session ID');
         navigate('/auth');
         return;
       }
-
-      const sessionId = sessionIdMatch[1];
 
       try {
         const result = await loginWithGoogle(sessionId);
@@ -1608,10 +1615,8 @@ function App() {
 
 // Separate component to handle routing with hash detection
 function AppRoutes() {
-  const location = window.location;
-  
-  // Check URL hash for session_id (Google OAuth callback)
-  if (location.hash?.includes('session_id=')) {
+  // Check for session_id in hash/query (Google OAuth callback)
+  if (getOAuthSessionIdFromLocation()) {
     return <AuthCallback />;
   }
   
