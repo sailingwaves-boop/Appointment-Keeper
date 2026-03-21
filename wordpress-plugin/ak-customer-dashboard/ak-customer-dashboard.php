@@ -13,9 +13,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AK_DASHBOARD_VERSION', '1.0.0');
+define('AK_DASHBOARD_VERSION', '1.1.0');
 define('AK_DASHBOARD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AK_DASHBOARD_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// Include signup handler
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-signup-handler.php';
 
 class AK_Customer_Dashboard {
     
@@ -32,6 +35,9 @@ class AK_Customer_Dashboard {
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
         add_shortcode('ak_customer_dashboard', array($this, 'render_dashboard'));
+        
+        // Initialize signup handler
+        new AK_Signup_Handler();
     }
     
     public function init() {
