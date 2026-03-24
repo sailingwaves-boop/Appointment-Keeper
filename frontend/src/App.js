@@ -139,7 +139,7 @@ const AuthPage = () => {
 
   const handleGoogleLogin = () => {
     // Direct Google OAuth - YOUR credentials, YOUR branding
-    const clientId = 'REMOVED_CLIENT_ID';
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     const redirectUri = window.location.origin + '/auth/callback';
     const scope = 'email profile';
     
