@@ -391,9 +391,9 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 # ============== GOOGLE OAUTH ROUTES ==============
 
 # Google OAuth Configuration - from environment variables
-# Google OAuth Configuration - set in backend/.env on your server
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = '336164855084-jse1r3a4o1t45kv7c4813h2hhqn6b2mk.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = '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'
 
 class GoogleTokenRequest(BaseModel):
     code: str
