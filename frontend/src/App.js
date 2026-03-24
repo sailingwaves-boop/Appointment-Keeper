@@ -279,7 +279,7 @@ const AuthCallback = () => {
         return;
       }
 
-      const redirectUri = window.location.origin + '/auth/callback';
+      const redirectUri = window.location.origin + '/auth/google/callback';
 
       try {
         const result = await loginWithGoogle(code, redirectUri);
