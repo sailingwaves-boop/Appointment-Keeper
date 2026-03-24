@@ -140,7 +140,8 @@ const AuthPage = () => {
   const handleGoogleLogin = () => {
     // Direct Google OAuth - YOUR credentials, YOUR branding
     const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-    const redirectUri = window.location.origin + '/auth/callback';
+    // Always use non-www version for redirect URI to match Google Console
+    const redirectUri = 'https://chroniclehelper.com/auth/callback';
     const scope = 'email profile';
     
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
