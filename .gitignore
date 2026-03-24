@@ -53,3 +53,7 @@ venv/
 *.tar.gz
 *.tar
 *.tgz
+-e 
+# Environment files
+*.env
+*.env.*
