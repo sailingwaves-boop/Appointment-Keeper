@@ -163,6 +163,11 @@ const AuthPage = () => {
           <p>The AI that never forgets</p>
         </div>
 
+        <div className="trial-badge" data-testid="trial-badge">
+          <Zap size={16} />
+          <span>10-day free trial</span>
+        </div>
+
         <button 
           onClick={handleGoogleLogin}
           className="google-btn"
@@ -462,9 +467,13 @@ const TrialSetupPage = () => {
       <div className="trial-setup-container">
         <div className="trial-setup-header">
           <Brain size={48} />
-          <h1>Choose Your Plan</h1>
-          <p>Select a subscription plan to get started with Chronicle</p>
-          <p className="trial-note">Secure payment powered by Stripe</p>
+          <h1>Start Your 10-Day Free Trial</h1>
+          <p>Choose a plan - you won't be charged until day 11</p>
+          <p className="trial-note">Card required to start trial. Cancel anytime.</p>
+          <div className="trial-features-note">
+            <p><Check size={14} /> Full AI assistant with memory</p>
+            <p><Check size={14} /> Phone & SMS unlocks after trial</p>
+          </div>
         </div>
 
         <div className="trial-plans-grid">
@@ -472,12 +481,12 @@ const TrialSetupPage = () => {
             <div key={plan.id} className={`trial-plan-card ${plan.id.includes('pro') ? 'featured' : ''}`}>
               {plan.id.includes('pro') && <div className="popular-badge">Most Popular</div>}
               <div className="plan-icon">{getPlanIcon(plan.id)}</div>
-              <h3>{plan.name}</h3>
+              <h3>Chronicle {plan.name}</h3>
               <div className="plan-price">
                 <span className="amount">£{plan.price}</span>
                 <span className="period">/month</span>
               </div>
-              <p className="after-trial">Billed monthly</p>
+              <p className="after-trial">Billed monthly after 10-day trial</p>
               <ul className="plan-features">
                 {plan.features.map((feature, idx) => (
                   <li key={idx}><Check size={16} /> {feature}</li>
@@ -489,7 +498,7 @@ const TrialSetupPage = () => {
                 className="trial-start-btn"
                 data-testid={`trial-start-${plan.id}`}
               >
-                {processingPlan === plan.id ? 'Processing...' : 'Subscribe Now'}
+                {processingPlan === plan.id ? 'Processing...' : 'Start Free Trial'}
               </button>
             </div>
           ))}
@@ -996,8 +1005,10 @@ const PhoneView = () => {
       {!canUsePhoneFeatures ? (
         <div className="upgrade-prompt">
           <Phone size={48} />
-          <h3>Upgrade to Pro or Business</h3>
-          <p>Phone calls and SMS require a Pro or Business subscription.</p>
+          <h3>{user?.is_subscribed ? 'Upgrade to Pro or Business' : 'Phone & SMS Available After Trial'}</h3>
+          <p>{user?.is_subscribed 
+            ? 'Phone calls and SMS require a Pro or Business subscription.' 
+            : 'Complete your 10-day trial to unlock Phone & SMS features.'}</p>
           <p>Pro includes 60 minutes and 100 texts per month.</p>
         </div>
       ) : (

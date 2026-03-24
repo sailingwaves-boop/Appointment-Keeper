@@ -325,8 +325,9 @@ async def register(user_data: UserCreate):
         "subscription_tier": None,
         "subscription_started_at": None,
         "trial_started_at": now,
-        "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "trial_used": False
+        "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=10)).isoformat(),
+        "trial_used": False,
+        "card_on_file": False
     }
     
     await db.users.insert_one(user_doc)
@@ -461,9 +462,9 @@ async def google_token_exchange(request: GoogleTokenRequest):
             }}
         )
     else:
-        # Create new user with 7-day trial
+        # Create new user with 10-day trial
         user_id = str(uuid.uuid4())
-        trial_ends = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        trial_ends = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
         user_doc = {
             "id": user_id,
             "email": email,
@@ -477,7 +478,8 @@ async def google_token_exchange(request: GoogleTokenRequest):
             "auth_provider": "google",
             "trial_started_at": now,
             "trial_ends_at": trial_ends,
-            "trial_used": False
+            "trial_used": False,
+            "card_on_file": False
         }
         await db.users.insert_one(user_doc)
     
