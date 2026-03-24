@@ -140,7 +140,7 @@ const AuthPage = () => {
   const handleGoogleLogin = () => {
     // Direct Google OAuth - YOUR credentials, YOUR branding
     const clientId = '336164855084-jse1r3a4o1t45kv7c4813h2hhqn6b2mk.apps.googleusercontent.com';
-    const redirectUri = window.location.origin + '/auth/callback';
+    const redirectUri = window.location.origin + '/auth/google/callback';
     const scope = 'email profile';
     
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -1642,7 +1642,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/google/callback" element={<AuthCallback />} />
       <Route path="/disclosure" element={<DisclosurePage />} />
       <Route path="/trial-setup" element={<TrialSetupPage />} />
       <Route path="/trial/success" element={<TrialSuccess />} />
