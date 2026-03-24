@@ -139,7 +139,7 @@ const AuthPage = () => {
 
   const handleGoogleLogin = () => {
     // Direct Google OAuth - YOUR credentials, YOUR branding
-    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    const clientId = '336164855084-jse1r3a4o1t45kv7c4813h2hhqn6b2mk.apps.googleusercontent.com';
     const redirectUri = window.location.origin + '/auth/callback';
     const scope = 'email profile';
     
