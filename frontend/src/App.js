@@ -163,11 +163,6 @@ const AuthPage = () => {
           <p>The AI that never forgets</p>
         </div>
 
-        <div className="trial-badge" data-testid="trial-badge">
-          <Zap size={16} />
-          <span>10-day free trial</span>
-        </div>
-
         <button 
           onClick={handleGoogleLogin}
           className="google-btn"
@@ -182,6 +177,10 @@ const AuthPage = () => {
           </svg>
           Continue with Google
         </button>
+
+        <p className="trial-text" data-testid="trial-text">
+          <Zap size={14} /> 10-day free trial
+        </p>
 
         <div className="auth-divider">
           <span>or</span>

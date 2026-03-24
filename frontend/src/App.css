@@ -214,6 +214,22 @@ body {
   color: #fbbf24;
 }
 
+.trial-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.trial-text svg {
+  color: #fbbf24;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;
