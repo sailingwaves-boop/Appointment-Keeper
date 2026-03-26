@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Request, Response, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.llm.openai import OpenAISpeechToText
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
 from twilio.rest import Client as TwilioClient
@@ -22,6 +23,7 @@ from elevenlabs import ElevenLabs
 import base64
 import asyncio
 import stripe
+import tempfile
 
 # Stripe Configuration
 STRIPE_MODE = os.environ.get('STRIPE_MODE', 'test')  # Change to 'live' when ready
@@ -745,6 +747,124 @@ async def delete_memory(memory_id: str, current_user: dict = Depends(get_current
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Memory not found")
     return {"message": "Memory deleted"}
+
+# ============== VOICE INPUT (WHISPER) ==============
+
+@api_router.post("/voice/transcribe")
+async def transcribe_voice(
+    audio: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Transcribe voice audio to text using Whisper"""
+    try:
+        # Read audio file
+        audio_content = await audio.read()
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
+            temp_file.write(audio_content)
+            temp_path = temp_file.name
+        
+        # Initialize Whisper
+        stt = OpenAISpeechToText(api_key=os.getenv("EMERGENT_LLM_KEY"))
+        
+        # Transcribe
+        with open(temp_path, "rb") as audio_file:
+            response = await stt.transcribe(
+                file=audio_file,
+                model="whisper-1",
+                response_format="json",
+                language="en"
+            )
+        
+        # Clean up temp file
+        os.unlink(temp_path)
+        
+        return {"text": response.text}
+    except Exception as e:
+        logger.error(f"Transcription error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to transcribe audio")
+
+# ============== ADMIN - MAGIC LINKS ==============
+
+ADMIN_EMAIL = "sailingwaves@gmail.com"  # Your admin email
+
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    """Check if user is admin"""
+    if current_user["email"] != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+@api_router.post("/admin/magic-link")
+async def create_magic_link(admin: dict = Depends(require_admin)):
+    """Generate a one-time magic link for free account"""
+    link_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    magic_link = {
+        "id": link_id,
+        "created_at": now,
+        "created_by": admin["id"],
+        "used": False,
+        "used_by": None,
+        "used_at": None,
+        "revoked": False
+    }
+    
+    await db.magic_links.insert_one(magic_link)
+    
+    return {
+        "link_id": link_id,
+        "url": f"https://chroniclehelper.com/signup?invite={link_id}"
+    }
+
+@api_router.get("/admin/magic-links")
+async def get_magic_links(admin: dict = Depends(require_admin)):
+    """Get all magic links"""
+    links = await db.magic_links.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Get user info for used links
+    for link in links:
+        if link.get("used_by"):
+            user = await db.users.find_one({"id": link["used_by"]}, {"_id": 0, "email": 1, "name": 1})
+            if user:
+                link["user_info"] = user
+    
+    return {"links": links}
+
+@api_router.post("/admin/revoke-access/{user_id}")
+async def revoke_user_access(user_id: str, admin: dict = Depends(require_admin)):
+    """Revoke a user's free access"""
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"access_revoked": True, "revoked_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Access revoked"}
+
+@api_router.post("/admin/restore-access/{user_id}")
+async def restore_user_access(user_id: str, admin: dict = Depends(require_admin)):
+    """Restore a user's access"""
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"access_revoked": False, "revoked_at": None}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Access restored"}
+
+@api_router.get("/invite/{link_id}")
+async def validate_magic_link(link_id: str):
+    """Validate a magic link"""
+    link = await db.magic_links.find_one({"id": link_id}, {"_id": 0})
+    if not link:
+        raise HTTPException(status_code=404, detail="Invalid invite link")
+    if link.get("used"):
+        raise HTTPException(status_code=400, detail="This invite has already been used")
+    if link.get("revoked"):
+        raise HTTPException(status_code=400, detail="This invite has been revoked")
+    return {"valid": True}
 
 # ============== CONTACTS ROUTES ==============
 

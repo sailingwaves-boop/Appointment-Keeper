@@ -847,6 +847,213 @@ body {
   cursor: not-allowed;
 }
 
+/* Voice Input Button */
+.voice-input-btn {
+  padding: 0.875rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-input-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.voice-input-btn.recording {
+  background: var(--error);
+  border-color: var(--error);
+  color: white;
+  animation: pulse 1s infinite;
+}
+
+.voice-input-btn.processing {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.voice-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Admin Page */
+.admin-page {
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--bg-primary);
+}
+
+.admin-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  font-size: 1.75rem;
+  color: var(--text-primary);
+}
+
+.back-btn {
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.admin-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.admin-section > p {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.create-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-link-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.link-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.link-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.link-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.link-status.available {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.link-status.used {
+  background: rgba(79, 109, 245, 0.2);
+  color: var(--accent);
+}
+
+.link-status.revoked {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--error);
+}
+
+.user-email {
+  color: var(--text-primary);
+}
+
+.link-date {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.revoke-btn, .restore-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.revoke-btn {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--error);
+}
+
+.revoke-btn:hover {
+  background: var(--error);
+  color: white;
+}
+
+.restore-btn {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.restore-btn:hover {
+  background: var(--success);
+  color: white;
+}
+
 /* Contacts & Memory Views */
 .contacts-view,
 .memory-view {

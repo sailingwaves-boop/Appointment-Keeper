@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Toaster, toast } from 'sonner';
@@ -21,11 +21,96 @@ import {
   Zap,
   Crown,
   Check,
-  Download
+  Download,
+  Mic,
+  MicOff,
+  Link,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const API = API_URL;
+
+// Voice Input Component
+const VoiceInput = ({ onTranscription, disabled }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      chunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        setIsProcessing(true);
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+
+        try {
+          const token = localStorage.getItem('session_token');
+          const response = await axios.post(`${API}/api/voice/transcribe`, formData, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+          if (response.data.text) {
+            onTranscription(response.data.text);
+          }
+        } catch (err) {
+          toast.error('Failed to transcribe audio');
+        } finally {
+          setIsProcessing(false);
+        }
+
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      toast.error('Microphone access denied');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className={`voice-input-btn ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''}`}
+      onClick={isRecording ? stopRecording : startRecording}
+      disabled={disabled || isProcessing}
+      data-testid="voice-input-btn"
+    >
+      {isProcessing ? (
+        <div className="voice-spinner" />
+      ) : isRecording ? (
+        <MicOff size={20} />
+      ) : (
+        <Mic size={20} />
+      )}
+    </button>
+  );
+};
 
 // Install Button Component - only shows in browser, not when installed as app
 const InstallButton = () => {
@@ -774,11 +859,15 @@ const ChatView = () => {
       </div>
 
       <form onSubmit={sendMessage} className="chat-input-form">
+        <VoiceInput 
+          onTranscription={(text) => setInput(prev => prev + text)} 
+          disabled={sending}
+        />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
+          placeholder="Type or speak your message..."
           disabled={sending}
           data-testid="chat-input"
         />
@@ -1736,6 +1825,148 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Admin Page Component
+const AdminPage = () => {
+  const { user } = useAuth();
+  const [links, setLinks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const navigate = useNavigate();
+
+  const ADMIN_EMAIL = 'sailingwaves@gmail.com';
+
+  useEffect(() => {
+    if (user?.email !== ADMIN_EMAIL) {
+      toast.error('Admin access required');
+      navigate('/');
+      return;
+    }
+    fetchLinks();
+  }, [user, navigate]);
+
+  const fetchLinks = async () => {
+    try {
+      const token = localStorage.getItem('session_token');
+      const response = await axios.get(`${API}/api/admin/magic-links`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLinks(response.data.links || []);
+    } catch (err) {
+      toast.error('Failed to load magic links');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createLink = async () => {
+    setCreating(true);
+    try {
+      const token = localStorage.getItem('session_token');
+      const response = await axios.post(`${API}/api/admin/magic-link`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Magic link created');
+      navigator.clipboard.writeText(response.data.url);
+      toast.success('Link copied to clipboard');
+      fetchLinks();
+    } catch (err) {
+      toast.error('Failed to create link');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const revokeAccess = async (userId) => {
+    try {
+      const token = localStorage.getItem('session_token');
+      await axios.post(`${API}/api/admin/revoke-access/${userId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Access revoked');
+      fetchLinks();
+    } catch (err) {
+      toast.error('Failed to revoke access');
+    }
+  };
+
+  const restoreAccess = async (userId) => {
+    try {
+      const token = localStorage.getItem('session_token');
+      await axios.post(`${API}/api/admin/restore-access/${userId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Access restored');
+      fetchLinks();
+    } catch (err) {
+      toast.error('Failed to restore access');
+    }
+  };
+
+  if (user?.email !== ADMIN_EMAIL) {
+    return null;
+  }
+
+  return (
+    <div className="admin-page" data-testid="admin-page">
+      <div className="admin-container">
+        <div className="admin-header">
+          <h1>Admin Panel</h1>
+          <button onClick={() => navigate('/')} className="back-btn">Back to App</button>
+        </div>
+
+        <div className="admin-section">
+          <h2>Magic Links</h2>
+          <p>Create one-time invite links for free accounts</p>
+          
+          <button 
+            onClick={createLink} 
+            disabled={creating}
+            className="create-link-btn"
+            data-testid="create-magic-link-btn"
+          >
+            <Link size={18} />
+            {creating ? 'Creating...' : 'Create Magic Link'}
+          </button>
+        </div>
+
+        <div className="admin-section">
+          <h2>Invited Users</h2>
+          {loading ? (
+            <p>Loading...</p>
+          ) : links.length === 0 ? (
+            <p>No magic links created yet</p>
+          ) : (
+            <div className="links-list">
+              {links.map(link => (
+                <div key={link.id} className="link-item">
+                  <div className="link-info">
+                    <span className={`link-status ${link.used ? 'used' : link.revoked ? 'revoked' : 'available'}`}>
+                      {link.used ? 'Used' : link.revoked ? 'Revoked' : 'Available'}
+                    </span>
+                    {link.user_info && (
+                      <span className="user-email">{link.user_info.email}</span>
+                    )}
+                    <span className="link-date">{new Date(link.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {link.used && link.used_by && (
+                    <button
+                      onClick={() => link.access_revoked ? restoreAccess(link.used_by) : revokeAccess(link.used_by)}
+                      className={link.access_revoked ? 'restore-btn' : 'revoke-btn'}
+                    >
+                      {link.access_revoked ? <UserCheck size={16} /> : <UserX size={16} />}
+                      {link.access_revoked ? 'Restore' : 'Revoke'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // App Component
 function App() {
   return (
@@ -1760,6 +1991,11 @@ function AppRoutes() {
       <Route path="/subscription/success" element={
         <ProtectedRoute>
           <SubscriptionSuccess />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <AdminPage />
         </ProtectedRoute>
       } />
       <Route
