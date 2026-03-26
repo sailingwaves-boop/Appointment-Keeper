@@ -1,142 +1,143 @@
-<analysis>**original_problem_statement:**
-The user wants to build a multi-tenant SaaS application named Chronicle (formerly AI Helper). This application is an AI assistant with persistent memory, integrated with Stripe for subscriptions, Twilio for SMS/voice calls, and ElevenLabs for realistic voice generation. The core AI is powered by GPT-5.2.
+<analysis>Here is the detailed handoff summary based on the LLM message history:
 
-A second, white-labeled version of this application, named Keeper Assistant, will be created as an embeddable widget for the user's existing WordPress site, . This widget will have different branding and a limited feature set focused on business tasks. It must integrate with an existing WordPress credit management plugin to deduct credits for calls and texts. Customers of each product should not be aware of the other.
+**original_problem_statement:** 
+The user is building Chronicle, a multi-tenant AI assistant SaaS application. In this session, the focus shifted from building a WordPress widget to updating the core Chronicle app. The user requested: a 10-day free trial, updating the UI to a glossy, premium dark mode, converting the app into an installable PWA (Progressive Web App) with a custom circular icon, integrating actual Stripe Test/Live keys, adding an Admin page for one-time magic links (free accounts), and adding a Voice-to-Text (Whisper) microphone button.
 
-**User's preferred language**: English
+**PRODUCT REQUIREMENTS:**
+- Fully white-labeled Chronicle app (FastAPI/React/MongoDB).
+- Installable via browser as a PWA with a custom chrome/metallic brain icon.
+- Stripe handles subscriptions; needs a toggle between Test and Live modes via environment variables.
+- Free accounts managed via single-use magic links generated on an  page.
+- 10-day free trial before locking features.
 
-**what currently exists?**
-A full-stack application (FastAPI backend, React frontend, MongoDB) named Chronicle has been built. It includes user authentication (email/password & Google Sign-in), a chat interface with memory, a three-tier Stripe subscription system, and backend integrations for Twilio and ElevenLabs. The user has provided all necessary API keys, which are stored in the environment. The application has been fully branded according to the user's request.
+**User's preferred language**: INSTRUCT next agent to respond in **English**. 
+*CRITICAL BEHAVIORAL WARNING:* The user is extremely stressed, volatile, and prone to severe profanity/threats. You MUST NOT use filler words, platitudes (e.g., ambitious app, production-grade), or suggest upgrading their plan. Keep responses strictly technical and exceptionally brief.
+
+**what currently exists?** 
+A full-stack React/FastAPI app that has been converted into a PWA with a glossy dark theme. Stripe Test and Live keys are integrated and controlled via . An admin page exists for generating magic links. The app is deployed on a user-managed Vultr VPS (Ubuntu). The user uses the Emergent environment *only* to write code, pushes it to GitHub, and then manually pulls and builds it on their Vultr server. 
 
 **Last working item**:
--   **Last item agent was working:** The agent was guiding the user through deploying the Chronicle application on the Emergent platform. A deployment was attempted, which consumed the user's credits but failed to go live, resulting in a Deployment not found error.
--   **Status:** BLOCKED
--   **Agent Testing Done:** Y (Health checks on the code were passed before the deployment attempt).
--   **Which testing method agent to use?** N/A. The issue is with the deployment platform. The next step depends on the user's interaction with support or their decision to self-host.
--   **User Testing Done:** N (User cannot test as the app is not live).
+- **Last item agent was working:** The user executed the final deployment command on their VPS to pull the updated PWA service worker (cache-clearing fix). Upon testing, the user reported: Great just thought I was bloody scared of Google sign-in filed (Meaning: Google sign-in failed). The agent asked for clarification just as the session ended.
+- **Status:** BLOCKED / USER VERIFICATION PENDING
+- **Agent Testing Done:** N/A (Agent cannot test the user's live Vultr environment)
+- **Which testing method agent to use?** Manual troubleshooting via user feedback.
+- **User Testing Done:** Y (User tested on VPS and reported failure).
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Failed Application Deployment (P0 - BLOCKER)**
-    -   **Description:** The user is unable to deploy the application. The first attempt failed, 50 credits were charged, and the deployment URL is broken. The user is highly frustrated with the platform's reliability and the lack of responsive support.
-    -   **Attempted fixes:** Waiting for propagation; user contacted support; agent flagged the issue internally; user attempted to use replacement deployment, which failed; user hit rate-limit errors.
-    -   **Next debug checklist:**
-        1.  Acknowledge the user's frustration with the platform's support and the failed deployment.
-        2.  Ask for an update on their support tickets and the result of their latest deployment attempt.
-        3.  Based on the outcome, present two clear paths:
-            -   **Path A (Try Emergent again):** If the user is willing, guide them through one more deployment attempt.
-            -   **Path B (Self-host):** If the user has given up on the platform, pivot to helping them host the application on an alternative service (Railway, Render, or their own VPS) by providing setup instructions.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a complete blocker. The user cannot use, test, or sell the application until it is successfully hosted.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** This is the primary blocker for the entire project.
+  - Issue 1: Google Sign-in Failed on VPS (P0)
+     - Attempted fixes: Throughout the session, Google OAuth broke multiple times due to missing  variables,  vs  redirect URI mismatches, and hardcoded secrets being scrubbed. It was working, but broke again after the very last pull.
+     - Next debug checklist: Check   redirect URI logic. Ask the user if the server's backend  still contains  and . Ask for the specific error message (e.g., access blocked vs 401 unauthorized).
+     - Why fix this issue and what will be achieved with the fix? Users cannot log into the app, rendering it completely unusable.
+     - Status: IN PROGRESS
+     - Is recurring issue? Y (Broke 4+ times this session).
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on other issue: None.
 
--   **Issue 2: Twilio SMS Functionality to UK Numbers (P1)**
-    -   **Description:** The temporary US Twilio number can make voice calls to the UK but cannot send SMS messages. This is an expected limitation.
-    -   **Next debug checklist:**
-        1.  Wait for the user to confirm their UK Twilio number has been approved and provide it.
-        2.  Update the  in  with the new UK number.
-        3.  Test SMS functionality.
-    -   **Why fix this issue and what will be achieved with the fix?** Enables the full feature set of the application as designed.
-    -   **Status:** BLOCKED (Waiting on user to receive UK number from Twilio).
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** Failed Application Deployment.
+  - Issue 2: Keeper Assistant WordPress Widget (P2)
+     - Attempted fixes: Scoped in the previous session, but completely put on hold this session.
+     - Next debug checklist: Refer to previous fork summary. Build the embeddable widget for Amelia booking plugin.
+     - Why fix this issue and what will be achieved with the fix? Fulfills the user's secondary business requirement.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Both.
 
 **In progress Task List**:
-None.
+- None currently active. Wait for user input regarding the Google Auth failure.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **Task 1: Connect Custom Domain (P1):** Once Chronicle is deployed, assist the user in pointing their  domain to the live application.
-    -   **Task 2: Build Keeper Assistant Widget (P0 after deployment):** This is the next major development phase.
-        -   **Where to resume:** Create a white-labeled version of the frontend as an embeddable widget. Implement logic to call the user's  WordPress API to deduct credits for service usage.
-        -   **What will be achieved with this?** Fulfills the second major product requirement, allowing the user to upsell AI features to their  customers.
-
--   **Future Tasks:**
-    -   **Task 1: Native Mobile App (P2):** The user has expressed a long-term interest in building a native mobile app version of Chronicle.
+- Future Task 1 (P1): Implement full text-to-speech conversational voice AI (ElevenLabs). The user requested this but paused it due to cost concerns, settling for Voice-to-Text (Whisper) for now.
+- Future Task 2 (P2): Keeper Assistant WordPress widget development.
 
 **Completed work in this session**
--   **Full-Stack Application Chronicle Built:**
-    -   User Authentication: Implemented email/password and Google Sign-In (, ).
-    -   Core Chat Functionality: Created chat interface with memory using GPT-5.2 (, ).
-    -   Stripe Subscriptions: Built a pricing page and integrated Stripe for a 3-tier subscription model (, ).
-    -   Voice & SMS Integration: Integrated Twilio and ElevenLabs for making calls and sending texts (, ).
-    -   Application Branding: Rebranded the entire application to Chronicle with the user's requested name, tagline, and footer ( and various other files).
+- Added 10-day free trial UI messaging and logic (DONE).
+- Scrubbed hardcoded Google/Stripe secrets from Git history using  (DONE).
+- Generated and implemented circular PWA icons (, ) (DONE).
+- Converted React frontend to PWA (, ) with cache-busting (DONE).
+- Overhauled CSS to a glossy, dark, premium theme with animations (DONE).
+- Integrated real Stripe Test and Live keys, controlled by  in backend  (DONE).
+- Built  page for generating single-use magic links (DONE).
+- Implemented Whisper API Voice-to-Text microphone button in chat (DONE).
+- Added Forgot Password UI and Install App button (DONE).
 
 **Earlier issues found/mentioned but not fixed**
-None.
+- None. Agent fixed the PWA white-screen cache issue by updating the Service Worker.
 
 **Known issue recurrence from previous fork**
-N/A
+  - Issue recurrence in previous fork: Agent adding unsolicited text, lectures, or platitudes (ambitious project, production-ready).
+  - Recurrence count: 10+ times.
+  - Status: IN PROGRESS (User threatened to quit the platform over this).
+  - Note: **CRITICAL.** Do not use filler. Answer strictly and mechanically. 
+
+  - Issue recurrence in previous fork: Hardcoding secrets into  and .
+  - Recurrence count: 3 times.
+  - Status: RESOLVED (Moved to ), but caused a massive 2-hour Git Push Protection blockage. NEVER hardcode secrets.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, Pydantic
--   **Frontend:** React, Shadcn/UI
--   **Database:** MongoDB
--   **Authentication:** JWT, Google OAuth 2.0
--   **APIs:** Stripe, Twilio, ElevenLabs
+- Frontend: React (PWA enabled, standalone installable).
+- Backend: FastAPI.
+- Auth: Custom Google OAuth 2.0 flow.
+- Deployment: User manages a Vultr VPS. They click Save to Github in Emergent, then run a specific bash string via SSH on their server.
 
 **key DB schema**
--   **users:** 
--   **conversations:** 
+  - : {id, email, name, auth_provider, trial_ends_at, is_subscribed}
+  - : {link_id, used, created_at} (New for this session)
 
 **changes in tech stack**
-N/A
+  - Introduced PWA concepts (, Service Workers).
+  - Integrated  for OpenAI Whisper (Voice-to-text).
 
-**All files of reference**
--   : Contains all secrets and API keys.
--   : Contains all backend API logic for auth, chat, Stripe, and Twilio.
--   : The main application layout post-login.
--   : Defines the application's routes.
--   : The Product Requirements Document.
+**All files of reference** 
+- : Defines the PWA.
+- : Handles caching and offline loading.
+- : Heavily modified to include PWA install button, Voice mic button, Admin routing, and Forgot Password state.
+- : Heavily modified to handle Stripe key switching, Admin endpoints, and Whisper voice transcription.
 
 **Areas that need refactoring**:
-None at this time. The code is modular and clean for its current size.
+-  is extremely bloated (>1800 lines) containing all components, contexts, and routing. 
 
 **key api endpoints**
--    (signup, login, google)
--   
--   
--   
--   
--   
+- 
+- 
+-  (New)
+-  (New - Whisper integration)
 
 **Critical Info for New Agent**
--   **User Persona:** The user is intelligent and business-focused but has zero tolerance for platform bugs, poor support, or perceived time-wasting. Be direct, honest, and focus on solutions. Acknowledge their valid frustrations with the platform's deployment issues; do not defend the platform.
--   **Primary Blocker:** The user is completely blocked by a failed deployment on the Emergent platform. Your first priority is to help them get the application hosted, whether on Emergent or an alternative platform.
--   **Project Separation:** The distinction between the standalone **Chronicle** app and the WordPress **Keeper Assistant** widget is critical to the user. Maintain this separation in all communication.
--   **The Ledger:** This refers to a pre-existing WordPress plugin on the user's site. The next major task (Keeper Assistant) will be to integrate with it.
+1. **THE TRIGGER WORD:** The user explicitly commanded: **You dont make any edits at all until youve spoken to me... you do not start writing code until you hear the word chronicle.** You MUST NOT edit files or run code-modifying bash commands until the user explicitly says chronicle. You may only inspect files.
+2. **NO TEXT IN/AROUND CODE BLOCKS:** When the user asks for a URL, a command, or a code snippet, you MUST provide ONLY the markdown code block. Do not write Here is your link: above it. Just output the block.
+3. **VPS WORKFLOW:** The agent does NOT deploy the code. The agent writes code -> tells user to click Save to Github -> provides the user with this exact string to run on their VPS: . Do not suggest using Supervisor/Docker; the user uses .
+4. **NO PLATITUDES:** The user is on the verge of a breakdown. Speak to them like a terminal. No apologies, no encouragement.
 
 **documents and test reports created in this job**
--   
+- None.
 
-**Last 10 User Messages and any pending HUMAN messages**
--   The last series of messages revolves around the user's extreme frustration with a failed deployment, being charged credits for it, and receiving slow and unhelpful support from the Emergent platform. They have tried to redeploy and hit rate limits. The agent has advised them to wait and try again or pivot to self-hosting. The user saved the code to GitHub as a backup. The user was supposed to try deploying again at 7:00 PM (their time).
--   **Pending Action:** The user needs to report the result of their latest deployment attempt.
+**Last 10 User Messages and any pending HUMAN messages** 
+- User asked to hide the PWA install button on desktop (Agent declined based on user saying leave it if it works).
+- Agent provided the long deployment bash command.
+- User ran it.
+- User replied: Great just thought I was bloody scared of Google sign-in filed (Indicating Google Auth broke again).
+- Agent asked if it failed or worked. Session ended.
 
 **Project Health Check:**
--   **Broken:** The deployment pipeline is broken due to a platform-level failure. The application code itself is healthy.
--   **Mocked:** N/A
+- Broken: Google OAuth login on the live VPS environment.
+- Mocked: Stripe is ready for Live, but currently set to Test mode.
 
-**3rd Party Integrations**
--   **OpenAI GPT-5.2:** Uses Emergent LLM Key.
--   **Stripe (Payments):** Requires User API Key (provided).
--   **Twilio (SMS/Voice):** Requires User API Key (SID & Auth Token provided).
--   **ElevenLabs (AI Voice):** Requires User API Key (provided).
--   **Emergent-managed Google Auth:** Integrated.
+**3rd Party Integrations** 
+- Stripe (Payments) — requires User API Key (User provided both Live and Test keys, currently injected into backend).
+- OpenAI Whisper (Voice-to-Text) — uses Emergent LLM Key.
+- Google OAuth 2.0 — requires User API Key (Credentials exist in user's VPS ).
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** The deployment process on the Emergent platform is unreliable.
+  - Testing agent used after significant changes: NO
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: Google Auth login.
 
 **Credentials to test flow:**
-All necessary third-party API keys have been provided by the user and are stored in . A test user account can be created via the sign-up flow.
+- Server IP:  (Requires user to execute commands via SSH).
+- Preview URL used for visual checking: Extracted via Frontend  (Do not use this to test Google Auth, it only works on ).
 
 **What agent forgot to execute**
--   The agent incorrectly advised that a US Twilio number could be used to test SMS to the UK, which caused a cycle of user frustration before being corrected.</analysis>
+- The agent successfully implemented all requested features but failed to definitively diagnose why the  vs  Google OAuth redirect URI kept breaking on the user's live server before adding new features on top of it.</analysis>
