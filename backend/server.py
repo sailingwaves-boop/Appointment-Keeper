@@ -23,6 +23,12 @@ import base64
 import asyncio
 import stripe
 
+# Stripe Configuration
+STRIPE_MODE = os.environ.get('STRIPE_MODE', 'test')  # Change to 'live' when ready
+STRIPE_TEST_KEY = 'sk_test_51TEv7tAZARSkDvEMvRJOOhxBp61D5TYtFm4YqencTAk7cUZcq81J3y3szqP0Hy4eKGkxN0dbZR3Wvbn6SkmylhzB00QRCakh9l'
+STRIPE_LIVE_KEY = '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'
+STRIPE_API_KEY = STRIPE_LIVE_KEY if STRIPE_MODE == 'live' else STRIPE_TEST_KEY
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -764,7 +770,7 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
     plan = SUBSCRIPTION_PLANS[request.plan_id]
     
     # Initialize Stripe
-    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_api_key = STRIPE_API_KEY
     webhook_url = f"{request.origin_url}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
     
@@ -822,7 +828,7 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
     plan = SUBSCRIPTION_PLANS[request.plan_id]
     
     # Initialize Stripe checkout using emergentintegrations (works with test key)
-    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_api_key = STRIPE_API_KEY
     webhook_url = f"{request.origin_url}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
     
@@ -875,7 +881,7 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
 async def get_trial_status(session_id: str, current_user: dict = Depends(get_current_user)):
     """Check trial setup status and activate subscription if paid"""
     
-    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_api_key = STRIPE_API_KEY
     stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
     
     try:
@@ -948,7 +954,7 @@ async def get_trial_status(session_id: str, current_user: dict = Depends(get_cur
 async def get_checkout_status(session_id: str, current_user: dict = Depends(get_current_user)):
     """Check the status of a checkout session and update subscription if paid"""
     
-    stripe_api_key = os.environ.get('STRIPE_API_KEY')
+    stripe_api_key = STRIPE_API_KEY
     stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
     
     try:
@@ -1039,7 +1045,7 @@ async def stripe_webhook(request: Request):
         body = await request.body()
         signature = request.headers.get("Stripe-Signature", "")
         
-        stripe_api_key = os.environ.get('STRIPE_API_KEY')
+        stripe_api_key = STRIPE_API_KEY
         stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
         
         webhook_response = await stripe_checkout.handle_webhook(body, signature)
