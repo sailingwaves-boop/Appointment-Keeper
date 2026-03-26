@@ -380,6 +380,35 @@ async def login(credentials: UserLogin):
     
     return TokenResponse(access_token=access_token, user=user_response)
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Send password reset link"""
+    user = await db.users.find_one({"email": request.email})
+    if not user:
+        # Don't reveal if email exists or not for security
+        return {"message": "If that email exists, a reset link has been sent"}
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store reset token
+    await db.password_resets.insert_one({
+        "user_id": user["id"],
+        "token": reset_token,
+        "expires_at": expires.isoformat(),
+        "used": False
+    })
+    
+    # In production, send email here
+    # For now, just log it
+    logger.info(f"Password reset requested for {request.email}")
+    
+    return {"message": "If that email exists, a reset link has been sent"}
+
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(

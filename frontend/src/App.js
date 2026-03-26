@@ -20,11 +20,58 @@ import {
   CreditCard,
   Zap,
   Crown,
-  Check
+  Check,
+  Download
 } from 'lucide-react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Install Button Component - only shows in browser, not when installed as app
+const InstallButton = () => {
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // Listen for install prompt
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      setIsInstalled(true);
+    }
+    setInstallPrompt(null);
+  };
+
+  if (isInstalled) return null;
+
+  return (
+    <button 
+      className="install-app-btn"
+      onClick={handleInstall}
+      data-testid="install-app-btn"
+    >
+      <Download size={18} />
+      Install Chronicle App
+    </button>
+  );
+};
 
 // Auth Context
 const AuthContext = createContext(null);
@@ -116,8 +163,26 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSending, setResetSending] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setResetSending(true);
+    try {
+      await axios.post(`${API}/api/auth/forgot-password`, { email: resetEmail });
+      toast.success('Password reset link sent to your email');
+      setShowForgotPassword(false);
+      setResetEmail('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send reset link');
+    } finally {
+      setResetSending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -236,6 +301,16 @@ const AuthPage = () => {
           </button>
         </form>
 
+        {isLogin && (
+          <button 
+            className="forgot-password-btn"
+            onClick={() => setShowForgotPassword(true)}
+            data-testid="forgot-password-btn"
+          >
+            Forgot your password?
+          </button>
+        )}
+
         <p className="auth-switch">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button 
@@ -245,7 +320,43 @@ const AuthPage = () => {
             {isLogin ? 'Sign up' : 'Sign in'}
           </button>
         </p>
+
+        <InstallButton />
       </div>
+
+      {showForgotPassword && (
+        <div className="modal-overlay" onClick={() => setShowForgotPassword(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Reset Password</h2>
+            <p>Enter your email and we'll send you a reset link</p>
+            <form onSubmit={handleForgotPassword}>
+              <div className="form-group">
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Your email address"
+                  required
+                  data-testid="reset-email-input"
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="auth-button"
+                disabled={resetSending}
+              >
+                {resetSending ? 'Sending...' : 'Send Reset Link'}
+              </button>
+            </form>
+            <button 
+              className="modal-close"
+              onClick={() => setShowForgotPassword(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
