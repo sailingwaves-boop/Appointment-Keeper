@@ -60,7 +60,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         formData.append('audio', blob, 'recording.webm');
 
         try {
-          const token = localStorage.getItem('session_token');
+          const token = localStorage.getItem('token');
           const response = await axios.post(`${API}/api/voice/transcribe`, formData, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -1846,7 +1846,7 @@ const AdminPage = () => {
 
   const fetchLinks = async () => {
     try {
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('token');
       const response = await axios.get(`${API}/api/admin/magic-links`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1861,7 +1861,7 @@ const AdminPage = () => {
   const createLink = async () => {
     setCreating(true);
     try {
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('token');
       const response = await axios.post(`${API}/api/admin/magic-link`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1878,7 +1878,7 @@ const AdminPage = () => {
 
   const revokeAccess = async (userId) => {
     try {
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('token');
       await axios.post(`${API}/api/admin/revoke-access/${userId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1891,7 +1891,7 @@ const AdminPage = () => {
 
   const restoreAccess = async (userId) => {
     try {
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('token');
       await axios.post(`${API}/api/admin/restore-access/${userId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
