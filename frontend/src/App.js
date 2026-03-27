@@ -1411,7 +1411,7 @@ const SubscriptionView = () => {
   const handleSubscribe = async (planId) => {
     setProcessingPlan(planId);
     try {
-      const res = await axios.post(`${API_URL}/api/checkout/create`, {
+      const res = await axios.post(`${API_URL}/api/trial/setup`, {
         plan_id: planId,
         origin_url: window.location.origin
       });
