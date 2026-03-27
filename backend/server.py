@@ -26,10 +26,8 @@ import stripe
 import tempfile
 
 # Stripe Configuration
-STRIPE_MODE = os.environ.get('STRIPE_MODE', 'live')  # Now defaulting to live
-STRIPE_TEST_KEY = 'sk_test_51TEv7tAZARSkDvEMvRJOOhxBp61D5TYtFm4YqencTAk7cUZcq81J3y3szqP0Hy4eKGkxN0dbZR3Wvbn6SkmylhzB00QRCakh9l'
-STRIPE_LIVE_KEY = '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'
-STRIPE_API_KEY = STRIPE_LIVE_KEY if STRIPE_MODE == 'live' else STRIPE_TEST_KEY
+STRIPE_MODE = os.environ.get('STRIPE_MODE', 'live')
+STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
