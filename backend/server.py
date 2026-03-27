@@ -966,7 +966,7 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
 
 @api_router.post("/trial/setup")
 async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict = Depends(get_current_user)):
-    """Create a Stripe checkout session for subscription (first payment starts trial)"""
+    """Create a Stripe checkout session with 10-day free trial"""
     
     # Validate plan exists
     if request.plan_id not in SUBSCRIPTION_PLANS:
@@ -974,20 +974,39 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
     
     plan = SUBSCRIPTION_PLANS[request.plan_id]
     
-    # Initialize Stripe checkout using emergentintegrations (works with test key)
-    stripe_api_key = STRIPE_API_KEY
-    webhook_url = f"{request.origin_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
+    # Set Stripe API key
+    stripe.api_key = STRIPE_API_KEY
     
     # Create URLs
     success_url = f"{request.origin_url}/trial/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{request.origin_url}/trial-setup"
     
     try:
-        # Create checkout session
-        checkout_request = CheckoutSessionRequest(
-            amount=plan["price"],
-            currency=plan["currency"],
+        # Create Stripe checkout session with subscription and trial
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": plan["currency"],
+                    "product_data": {
+                        "name": f"Chronicle {plan['name']}",
+                    },
+                    "unit_amount": int(plan["price"] * 100),
+                    "recurring": {
+                        "interval": plan["interval"]
+                    }
+                },
+                "quantity": 1
+            }],
+            subscription_data={
+                "trial_period_days": 10,
+                "metadata": {
+                    "user_id": current_user["id"],
+                    "plan_id": request.plan_id
+                }
+            },
+            customer_email=current_user["email"],
             success_url=success_url,
             cancel_url=cancel_url,
             metadata={
@@ -999,13 +1018,11 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
             }
         )
         
-        session = await stripe_checkout.create_checkout_session(checkout_request)
-        
         # Store transaction in database
         now = datetime.now(timezone.utc).isoformat()
         transaction_doc = {
             "id": str(uuid.uuid4()),
-            "session_id": session.session_id,
+            "session_id": session.id,
             "user_id": current_user["id"],
             "user_email": current_user["email"],
             "plan_id": request.plan_id,
@@ -1018,7 +1035,7 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
         }
         await db.payment_transactions.insert_one(transaction_doc)
         
-        return {"checkout_url": session.url, "session_id": session.session_id}
+        return {"checkout_url": session.url, "session_id": session.id}
         
     except Exception as e:
         logger.error(f"Trial setup error: {str(e)}")
