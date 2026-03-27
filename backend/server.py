@@ -25,12 +25,12 @@ import asyncio
 import stripe
 import tempfile
 
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
 # Stripe Configuration
 STRIPE_MODE = os.environ.get('STRIPE_MODE', 'live')
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
