@@ -26,7 +26,12 @@ import {
   MicOff,
   Link,
   UserX,
-  UserCheck
+  UserCheck,
+  ArrowUp,
+  Camera,
+  Paperclip,
+  Volume2,
+  Code
 } from 'lucide-react';
 import './App.css';
 
@@ -761,8 +766,12 @@ const ChatView = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const { user } = useAuth();
   const messagesEndRef = React.useRef(null);
+  const fileInputRef = React.useRef(null);
+  const cameraInputRef = React.useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -772,19 +781,104 @@ const ChatView = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      if (file.type.startsWith('image/')) {
+        setPreviewUrl(URL.createObjectURL(file));
+      }
+    }
+  };
+
+  // Handle camera capture
+  const handleCameraCapture = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  // Clear selected file
+  const clearFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  // Text-to-speech for AI responses
+  const speakMessage = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-GB';
+      utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      toast.error('Text-to-speech not supported');
+    }
+  };
+
+  // Parse code blocks in messages
+  const parseMessage = (content) => {
+    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: content.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'code', language: match[1] || 'text', content: match[2].trim() });
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push({ type: 'text', content: content.slice(lastIndex) });
+    }
+
+    return parts.length > 0 ? parts : [{ type: 'text', content }];
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && !selectedFile) || sending) return;
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    
+    // Create message with optional image
+    const newMessage = { 
+      role: 'user', 
+      content: userMessage,
+      image: previewUrl
+    };
+    setMessages(prev => [...prev, newMessage]);
     setSending(true);
 
     try {
+      // If there's a file, upload it first
+      let imageUrl = null;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        try {
+          const uploadRes = await axios.post(`${API_URL}/api/upload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          imageUrl = uploadRes.data.url;
+        } catch (uploadErr) {
+          console.log('File upload skipped');
+        }
+      }
+
       const res = await axios.post(`${API_URL}/api/chat`, {
         message: userMessage,
-        session_id: sessionId
+        session_id: sessionId,
+        image_url: imageUrl
       });
       
       if (!sessionId) {
@@ -792,17 +886,27 @@ const ChatView = () => {
       }
       
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.response }]);
+      clearFile();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send message');
-      setMessages(prev => prev.slice(0, -1)); // Remove user message on error
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setSending(false);
+    }
+  };
+
+  // Handle Enter key to send
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(e);
     }
   };
 
   const startNewChat = () => {
     setMessages([]);
     setSessionId(null);
+    clearFile();
   };
 
   return (
@@ -840,7 +944,31 @@ const ChatView = () => {
                 {msg.role === 'user' ? <User size={20} /> : <Brain size={20} />}
               </div>
               <div className="message-content">
-                <pre>{msg.content}</pre>
+                {msg.image && (
+                  <img src={msg.image} alt="Uploaded" className="message-image" />
+                )}
+                {parseMessage(msg.content).map((part, i) => (
+                  part.type === 'code' ? (
+                    <div key={i} className="code-block">
+                      <div className="code-header">
+                        <Code size={14} />
+                        <span>{part.language}</span>
+                      </div>
+                      <pre><code>{part.content}</code></pre>
+                    </div>
+                  ) : (
+                    <pre key={i}>{part.content}</pre>
+                  )
+                ))}
+                {msg.role === 'assistant' && (
+                  <button 
+                    className="listen-btn" 
+                    onClick={() => speakMessage(msg.content)}
+                    title="Listen to response"
+                  >
+                    <Volume2 size={16} />
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -858,21 +986,74 @@ const ChatView = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* File Preview */}
+      {previewUrl && (
+        <div className="file-preview">
+          <img src={previewUrl} alt="Preview" />
+          <button onClick={clearFile} className="clear-preview">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={sendMessage} className="chat-input-form">
+        {/* Hidden file inputs */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          accept="image/*,.pdf,.txt,.doc,.docx"
+          style={{ display: 'none' }}
+        />
+        <input
+          type="file"
+          ref={cameraInputRef}
+          onChange={handleCameraCapture}
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+        />
+        
+        {/* Camera button */}
+        <button 
+          type="button" 
+          className="input-action-btn"
+          onClick={() => cameraInputRef.current?.click()}
+          title="Take photo"
+        >
+          <Camera size={20} />
+        </button>
+        
+        {/* File upload button */}
+        <button 
+          type="button" 
+          className="input-action-btn"
+          onClick={() => fileInputRef.current?.click()}
+          title="Upload file"
+        >
+          <Paperclip size={20} />
+        </button>
+        
+        {/* Voice input */}
         <VoiceInput 
           onTranscription={(text) => setInput(prev => prev + text)} 
           disabled={sending}
         />
+        
+        {/* Text input */}
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type or speak your message..."
           disabled={sending}
           data-testid="chat-input"
         />
-        <button type="submit" disabled={sending || !input.trim()} data-testid="send-message-btn">
-          <Send size={20} />
+        
+        {/* Send button with up arrow */}
+        <button type="submit" disabled={sending || (!input.trim() && !selectedFile)} data-testid="send-message-btn">
+          <ArrowUp size={20} />
         </button>
       </form>
     </div>

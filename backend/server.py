@@ -193,6 +193,35 @@ SUBSCRIPTION_PLANS = {
     }
 }
 
+# ============== VOICE ADD-ON PACKS ==============
+
+VOICE_PACKS = {
+    "voice_light": {
+        "id": "voice_light",
+        "name": "Voice Light",
+        "price": 15.00,
+        "currency": "gbp",
+        "minutes": 30,
+        "description": "30 AI voice call minutes"
+    },
+    "voice_medium": {
+        "id": "voice_medium",
+        "name": "Voice Medium",
+        "price": 49.00,
+        "currency": "gbp",
+        "minutes": 120,
+        "description": "120 AI voice call minutes"
+    },
+    "voice_heavy": {
+        "id": "voice_heavy",
+        "name": "Voice Heavy",
+        "price": 99.00,
+        "currency": "gbp",
+        "minutes": 300,
+        "description": "300 AI voice call minutes"
+    }
+}
+
 class CheckoutRequest(BaseModel):
     plan_id: str
     origin_url: str
@@ -782,6 +811,56 @@ async def transcribe_voice(
     except Exception as e:
         logger.error(f"Transcription error: {e}")
         raise HTTPException(status_code=500, detail="Failed to transcribe audio")
+
+# ============== FILE UPLOAD ==============
+
+@api_router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload a file (image, document) for chat"""
+    try:
+        # Read file content
+        content = await file.read()
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+        filename = f"{file_id}.{ext}"
+        
+        # Store file metadata in database
+        now = datetime.now(timezone.utc).isoformat()
+        file_doc = {
+            "id": file_id,
+            "user_id": current_user["id"],
+            "filename": filename,
+            "original_name": file.filename,
+            "content_type": file.content_type,
+            "size": len(content),
+            "data": base64.b64encode(content).decode(),
+            "created_at": now
+        }
+        await db.uploads.insert_one(file_doc)
+        
+        return {"url": f"/api/files/{file_id}", "file_id": file_id}
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload file")
+
+@api_router.get("/files/{file_id}")
+async def get_file(file_id: str):
+    """Retrieve uploaded file"""
+    file_doc = await db.uploads.find_one({"id": file_id}, {"_id": 0})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content = base64.b64decode(file_doc["data"])
+    return Response(
+        content=content,
+        media_type=file_doc["content_type"],
+        headers={"Content-Disposition": f"inline; filename={file_doc['original_name']}"}
+    )
 
 # ============== ADMIN - MAGIC LINKS ==============
 
@@ -1507,6 +1586,103 @@ async def get_sms_history(current_user: dict = Depends(get_current_user)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
     return {"messages": messages}
+
+# ============== VOICE PACKS ==============
+
+@api_router.get("/voice/packs")
+async def get_voice_packs():
+    """Get available voice minute packs"""
+    return {"packs": list(VOICE_PACKS.values())}
+
+@api_router.get("/voice/balance")
+async def get_voice_balance(current_user: dict = Depends(get_current_user)):
+    """Get user's voice minutes balance"""
+    return {
+        "minutes_remaining": current_user.get("voice_minutes", 0),
+        "has_voice_feature": current_user.get("voice_minutes", 0) > 0
+    }
+
+class VoicePackPurchaseRequest(BaseModel):
+    pack_id: str
+    origin_url: str
+
+@api_router.post("/voice/purchase")
+async def purchase_voice_pack(request: VoicePackPurchaseRequest, current_user: dict = Depends(get_current_user)):
+    """Purchase a voice minute pack via Stripe"""
+    if request.pack_id not in VOICE_PACKS:
+        raise HTTPException(status_code=400, detail="Invalid pack selected")
+    
+    pack = VOICE_PACKS[request.pack_id]
+    
+    stripe.api_key = STRIPE_API_KEY
+    
+    success_url = f"{request.origin_url}/voice/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{request.origin_url}/settings"
+    
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": pack["currency"],
+                    "product_data": {
+                        "name": f"Chronicle {pack['name']}",
+                        "description": pack["description"]
+                    },
+                    "unit_amount": int(pack["price"] * 100)
+                },
+                "quantity": 1
+            }],
+            customer_email=current_user["email"],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": current_user["id"],
+                "pack_id": request.pack_id,
+                "minutes": str(pack["minutes"]),
+                "type": "voice_pack"
+            }
+        )
+        
+        return {"checkout_url": session.url, "session_id": session.id}
+    except Exception as e:
+        logger.error(f"Voice pack purchase error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create checkout")
+
+@api_router.get("/voice/verify/{session_id}")
+async def verify_voice_purchase(session_id: str, current_user: dict = Depends(get_current_user)):
+    """Verify voice pack purchase and add minutes"""
+    stripe.api_key = STRIPE_API_KEY
+    
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status == "paid" and session.metadata.get("type") == "voice_pack":
+            minutes = int(session.metadata.get("minutes", 0))
+            
+            # Add minutes to user
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$inc": {"voice_minutes": minutes}}
+            )
+            
+            # Log purchase
+            await db.voice_purchases.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "pack_id": session.metadata.get("pack_id"),
+                "minutes": minutes,
+                "session_id": session_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            return {"success": True, "minutes_added": minutes}
+        
+        return {"success": False, "message": "Payment not completed"}
+    except Exception as e:
+        logger.error(f"Voice verification error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify purchase")
 
 # ============== TEST CALL (ADMIN ONLY) ==============
 
