@@ -1,0 +1,140 @@
+APPOINTMENTKEEPER PROJECT SUMMARY
+==================================
+Thread: AK-41 Dashboard
+Last Updated: March 2025
+
+=====================================
+WHAT HAS BEEN BUILT (COMPLETE)
+=====================================
+
+1. AK DEBT LEDGER PLUGIN
+   - Customers track debts owed to them
+   - Send SMS reminders via Twilio
+   - Send email reminders via SendGrid
+   - Uses credits when reminders sent
+   - Shortcode: [ak_debt_ledger]
+   - File: ak-debt-ledger.zip
+
+2. AK CREDIT MANAGER PLUGIN
+   - Admin tool to manage customer credits
+   - Four plans: Basic, Standard, Premium, Enterprise
+   - API endpoint for Zapier: /wp-json/ak-credit/v1/deduct
+   - Widget inside Amelia admin panel
+   - API key in: Credit Manager > Settings
+   - File: ak-credit-manager-NEW.zip
+
+3. AK CUSTOMER DASHBOARD PLUGIN
+   - Customer page at /my-dashboard
+   - Shows: Appointments, Debt Ledger, Usage History, Referrals
+   - Shortcode: [ak_customer_dashboard]
+   - File: ak-customer-dashboard-NEW.zip
+
+4. SIGNUP POPUP FORM (inside Customer Dashboard plugin)
+   - Modern popup with pill-shaped buttons
+   - Google sign in button (uses Nextend Social Login)
+   - Email and password signup
+   - Email verification with link
+   - Redirects to plan selection after verification
+
+   SHORTCODES FOR SIGNUP BUTTONS:
+   [ak_signup_button text="Get Started Free"]
+   [ak_login_button text="Sign In"]
+
+   Put these on your homepage or anywhere you want buttons.
+
+
+=====================================
+WHAT NEEDS TO BE BUILT (TODO)
+=====================================
+
+1. PLAN SELECTION PAGE
+   - Shows four plans with prices
+   - Customer picks one
+   - Connects to Stripe checkout
+   - 7-day free trial
+   - Card required upfront
+   - Auto-charges after 7 days
+
+2. STRIPE BILLING INTEGRATION
+   - Monthly subscription
+   - 7-day trial period
+   - Auto-add credits after payment
+   - Cancel anytime during trial
+
+3. APPOINTMENTKEEPER HELPER WIDGET (discussed, not built)
+   - Simpler version of Chronicle
+   - Extra 12 pounds per month addon
+   - Features:
+     - Make appointments via chat
+     - Organise phone call reminders
+     - Organise text reminders
+     - GPS directions to appointments
+     - Birthday songs to others (uses ElevenLabs)
+   - No phone calls like full Chronicle
+   - Different name from Chronicle
+   - Will be integrated into admin panel
+
+
+=====================================
+URLS AND LOCATIONS
+=====================================
+
+Customer Dashboard: appointmentkeeper.co.uk/my-dashboard
+Plan Selection: appointmentkeeper.co.uk/choose-plan (not built yet)
+
+WordPress Admin Locations:
+- Credit Manager: WordPress sidebar > Credit Manager
+- Debt Ledger: WordPress sidebar > Debt Ledger
+- API Key: Credit Manager > Settings
+
+
+=====================================
+API FOR ZAPIER
+=====================================
+
+Endpoint: appointmentkeeper.co.uk/wp-json/ak-credit/v1/deduct
+Method: POST
+Header: X-API-Key (from Credit Manager > Settings)
+
+Body:
+{
+  "email": "customer@example.com",
+  "credit_type": "sms",
+  "amount": 1,
+  "reason": "Appointment reminder"
+}
+
+
+=====================================
+SUBSCRIPTION PLANS
+=====================================
+
+Basic:      50 SMS, 20 Calls, 100 Emails - 9.99/month
+Standard:   150 SMS, 50 Calls, 300 Emails - 24.99/month
+Premium:    500 SMS, 150 Calls, 1000 Emails - 49.99/month
+Enterprise: 2000 SMS, 500 Calls, 5000 Emails - 149.99/month
+
+Change these in: Credit Manager > Settings
+
+
+=====================================
+FILES TO DOWNLOAD
+=====================================
+
+All in code server:
+- ak-debt-ledger.zip
+- ak-credit-manager-NEW.zip (has Zapier API)
+- ak-customer-dashboard-NEW.zip (has signup popup)
+- appointmentkeeper-setup-guide.txt
+- ak-project-summary.txt (this file)
+
+
+=====================================
+NEXT SESSION TODO
+=====================================
+
+1. Build plan selection page
+2. Integrate Stripe with 7-day trial
+3. Connect signup flow to billing
+4. Test full customer journey
+5. Then discuss helper widget integration
