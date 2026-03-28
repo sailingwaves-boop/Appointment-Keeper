@@ -718,8 +718,18 @@ User's name: {current_user['name']}"""
         return ChatResponse(response=response_text, session_id=session_id)
         
     except Exception as e:
+        error_msg = str(e).lower()
         logger.error(f"Chat error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Chronicle error: {str(e)}")
+        
+        # Handle specific error messages
+        if "credit" in error_msg or "balance" in error_msg or "insufficient" in error_msg:
+            raise HTTPException(status_code=402, detail="AI service temporarily unavailable. Please try again later.")
+        elif "rate limit" in error_msg:
+            raise HTTPException(status_code=429, detail="Too many requests. Please wait a moment and try again.")
+        elif "too long" in error_msg or "token" in error_msg:
+            raise HTTPException(status_code=400, detail="Message too long. Please try a shorter message.")
+        else:
+            raise HTTPException(status_code=500, detail="Chronicle is having trouble right now. Please try again.")
 
 @api_router.get("/chat/history")
 async def get_chat_history(session_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):

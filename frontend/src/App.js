@@ -44,12 +44,49 @@ const VoiceInput = ({ onTranscription, disabled }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const silenceTimeoutRef = useRef(null);
+  const lastSoundTimeRef = useRef(null);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       chunksRef.current = [];
+
+      // Set up audio analysis for silence detection
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      source.connect(analyserRef.current);
+      analyserRef.current.fftSize = 256;
+      
+      lastSoundTimeRef.current = Date.now();
+
+      // Check for silence every 100ms
+      const checkSilence = () => {
+        if (!isRecording && !mediaRecorderRef.current) return;
+        
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        
+        if (average > 10) {
+          // Sound detected
+          lastSoundTimeRef.current = Date.now();
+        } else {
+          // Silence - check if 5 seconds passed
+          if (Date.now() - lastSoundTimeRef.current > 5000) {
+            stopRecording();
+            return;
+          }
+        }
+        
+        silenceTimeoutRef.current = setTimeout(checkSilence, 100);
+      };
 
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -58,6 +95,14 @@ const VoiceInput = ({ onTranscription, disabled }) => {
       };
 
       mediaRecorderRef.current.onstop = async () => {
+        // Clear silence detection
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
+        
         setIsProcessing(true);
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         
@@ -86,13 +131,16 @@ const VoiceInput = ({ onTranscription, disabled }) => {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
+      
+      // Start silence detection
+      checkSilence();
     } catch (err) {
       toast.error('Microphone access denied');
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
@@ -768,6 +816,7 @@ const ChatView = () => {
   const [sessionId, setSessionId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const { user } = useAuth();
   const messagesEndRef = React.useRef(null);
   const fileInputRef = React.useRef(null);
@@ -777,9 +826,58 @@ const ChatView = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Load last session on mount
+  useEffect(() => {
+    const loadLastSession = async () => {
+      try {
+        // Get last session from localStorage or API
+        const savedSessionId = localStorage.getItem('chronicle_session_id');
+        
+        // Fetch chat sessions
+        const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`);
+        const sessions = sessionsRes.data.sessions;
+        
+        if (sessions && sessions.length > 0) {
+          // Use saved session if exists, otherwise use most recent
+          const targetSession = savedSessionId || sessions[0]._id;
+          
+          // Fetch messages for this session
+          const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${targetSession}`);
+          const conversations = historyRes.data.conversations;
+          
+          if (conversations && conversations.length > 0) {
+            // Convert to message format
+            const loadedMessages = [];
+            conversations.reverse().forEach(conv => {
+              loadedMessages.push({ role: 'user', content: conv.user_message });
+              loadedMessages.push({ role: 'assistant', content: conv.assistant_response });
+            });
+            
+            setMessages(loadedMessages);
+            setSessionId(targetSession);
+            localStorage.setItem('chronicle_session_id', targetSession);
+          }
+        }
+      } catch (err) {
+        console.log('No previous session found');
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    
+    loadLastSession();
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Save session ID to localStorage when it changes
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('chronicle_session_id', sessionId);
+    }
+  }, [sessionId]);
 
   // Handle file selection
   const handleFileSelect = (e) => {
@@ -906,18 +1004,86 @@ const ChatView = () => {
   const startNewChat = () => {
     setMessages([]);
     setSessionId(null);
+    localStorage.removeItem('chronicle_session_id');
     clearFile();
+  };
+
+  // Memories panel state
+  const [showMemories, setShowMemories] = useState(false);
+  const [memories, setMemories] = useState([]);
+  const [loadingMemories, setLoadingMemories] = useState(false);
+
+  const fetchMemories = async () => {
+    setLoadingMemories(true);
+    try {
+      const res = await axios.get(`${API_URL}/api/memory`);
+      setMemories(res.data);
+    } catch (err) {
+      console.log('Failed to load memories');
+    } finally {
+      setLoadingMemories(false);
+    }
+  };
+
+  const toggleMemories = () => {
+    if (!showMemories) {
+      fetchMemories();
+    }
+    setShowMemories(!showMemories);
+  };
+
+  const insertMemory = (memory) => {
+    setInput(prev => prev + (prev ? '\n' : '') + `${memory.key}: ${memory.value}`);
+    setShowMemories(false);
   };
 
   return (
     <div className="chat-view">
       <div className="chat-header">
         <h2>Chat with Chronicle</h2>
-        <button onClick={startNewChat} className="new-chat-btn" data-testid="new-chat-btn">
-          <Plus size={18} />
-          New Chat
-        </button>
+        <div className="chat-header-actions">
+          <button 
+            onClick={toggleMemories} 
+            className={`memory-toggle-btn ${showMemories ? 'active' : ''}`}
+            title="View memories"
+          >
+            <Brain size={18} />
+          </button>
+          <button onClick={startNewChat} className="new-chat-btn" data-testid="new-chat-btn">
+            <Plus size={18} />
+            New Chat
+          </button>
+        </div>
       </div>
+
+      {/* Memories Panel */}
+      {showMemories && (
+        <div className="memories-panel">
+          <div className="memories-panel-header">
+            <h3>Memories</h3>
+            <button onClick={() => setShowMemories(false)}><X size={18} /></button>
+          </div>
+          {loadingMemories ? (
+            <div className="loading">Loading...</div>
+          ) : memories.length === 0 ? (
+            <div className="empty-memories">No memories yet</div>
+          ) : (
+            <div className="memories-list-panel">
+              {memories.map(memory => (
+                <div 
+                  key={memory.id} 
+                  className="memory-item-panel"
+                  onClick={() => insertMemory(memory)}
+                  title="Click to insert into chat"
+                >
+                  <span className="memory-key">{memory.key}</span>
+                  <span className="memory-value">{memory.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="messages-container">
         {messages.length === 0 ? (
