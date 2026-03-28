@@ -1508,6 +1508,41 @@ async def get_sms_history(current_user: dict = Depends(get_current_user)):
     ).sort("created_at", -1).to_list(50)
     return {"messages": messages}
 
+# ============== TEST CALL (ADMIN ONLY) ==============
+
+class TestCallRequest(BaseModel):
+    to_phone: str
+    message: str = "Hello, this is a test call from Chronicle. Your phone integration is working correctly. Goodbye!"
+
+@api_router.post("/admin/test-call")
+async def admin_test_call(request: TestCallRequest, admin: dict = Depends(require_admin)):
+    """Make a test call (admin only, no subscription required)"""
+    try:
+        account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+        auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        from_number = os.environ.get('TWILIO_PHONE_NUMBER')
+        
+        if not account_sid or not auth_token or not from_number:
+            raise HTTPException(status_code=500, detail="Twilio not configured")
+        
+        twilio_client = TwilioClient(account_sid, auth_token)
+        
+        # Create TwiML for the test message
+        twiml = f'<Response><Say voice="Polly.Amy" language="en-GB">{request.message}</Say></Response>'
+        
+        # Make the call
+        call = twilio_client.calls.create(
+            twiml=twiml,
+            to=request.to_phone,
+            from_=from_number
+        )
+        
+        return {"success": True, "call_sid": call.sid, "status": call.status}
+        
+    except Exception as e:
+        logger.error(f"Test call error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app
 app.include_router(api_router)
 
