@@ -812,11 +812,12 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1rem;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   background: var(--bg-primary);
+  box-sizing: border-box;
 }
 
 .empty-chat {
@@ -859,10 +860,10 @@ body {
 
 .message {
   display: flex;
-  gap: 0.5rem;
-  max-width: 100%;
+  gap: 8px;
   width: 100%;
-  padding: 0 0.5rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .message.user {
@@ -870,9 +871,10 @@ body {
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  max-width: 28px;
   border-radius: 8px;
   background: var(--bg-tertiary);
   display: flex;
@@ -896,8 +898,9 @@ body {
   padding: 0.75rem 1rem;
   border-radius: 12px;
   border: 1px solid var(--border);
-  max-width: calc(100% - 60px);
+  flex: 1;
   min-width: 0;
+  max-width: calc(100% - 40px);
   position: relative;
   overflow-wrap: break-word;
   word-break: break-word;
