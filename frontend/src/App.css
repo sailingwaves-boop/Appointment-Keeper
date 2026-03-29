@@ -640,10 +640,17 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 100%;
   width: 100%;
   position: relative;
+  overflow-x: hidden;
+}
+
+@media (min-width: 1024px) {
+  .chat-view {
+    max-width: 900px;
+    margin: 0 auto;
+  }
 }
 
 .chat-header {
@@ -1559,8 +1566,15 @@ body {
 /* Subscription View */
 .subscription-view {
   padding: 1.5rem;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
+  overflow-x: hidden;
+}
+
+@media (min-width: 1024px) {
+  .subscription-view {
+    max-width: 900px;
+  }
 }
 
 .subscription-header {

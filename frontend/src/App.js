@@ -46,14 +46,30 @@ const VoiceInput = ({ onTranscription, disabled }) => {
   const chunksRef = useRef([]);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
-  const silenceTimeoutRef = useRef(null);
+  const silenceIntervalRef = useRef(null);
   const lastSoundTimeRef = useRef(null);
+  const streamRef = useRef(null);
+  const isRecordingRef = useRef(false);
+
+  const stopRecording = () => {
+    isRecordingRef.current = false;
+    if (silenceIntervalRef.current) {
+      clearInterval(silenceIntervalRef.current);
+      silenceIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       chunksRef.current = [];
+      isRecordingRef.current = true;
 
       // Set up audio analysis for silence detection
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,9 +80,12 @@ const VoiceInput = ({ onTranscription, disabled }) => {
       
       lastSoundTimeRef.current = Date.now();
 
-      // Check for silence every 100ms
-      const checkSilence = () => {
-        if (!isRecording && !mediaRecorderRef.current) return;
+      // Check for silence every 200ms using interval
+      silenceIntervalRef.current = setInterval(() => {
+        if (!isRecordingRef.current || !analyserRef.current) {
+          clearInterval(silenceIntervalRef.current);
+          return;
+        }
         
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
         analyserRef.current.getByteFrequencyData(dataArray);
@@ -74,19 +93,16 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         // Calculate average volume
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         
-        if (average > 10) {
+        if (average > 15) {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
           // Silence - check if 5 seconds passed
           if (Date.now() - lastSoundTimeRef.current > 5000) {
             stopRecording();
-            return;
           }
         }
-        
-        silenceTimeoutRef.current = setTimeout(checkSilence, 100);
-      };
+      }, 200);
 
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -96,8 +112,8 @@ const VoiceInput = ({ onTranscription, disabled }) => {
 
       mediaRecorderRef.current.onstop = async () => {
         // Clear silence detection
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
+        if (silenceIntervalRef.current) {
+          clearInterval(silenceIntervalRef.current);
         }
         if (audioContextRef.current) {
           audioContextRef.current.close();
@@ -126,23 +142,15 @@ const VoiceInput = ({ onTranscription, disabled }) => {
           setIsProcessing(false);
         }
 
-        stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
       };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      
-      // Start silence detection
-      checkSilence();
     } catch (err) {
       toast.error('Microphone access denied');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
     }
   };
 
