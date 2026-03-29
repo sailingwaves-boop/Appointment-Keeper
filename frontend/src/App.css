@@ -728,7 +728,8 @@ body {
   position: absolute;
   top: 60px;
   right: 1rem;
-  width: 320px;
+  width: 90%;
+  max-width: 320px;
   max-height: 400px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -1524,6 +1525,11 @@ body {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+  
   .mobile-menu-btn {
     display: flex;
   }
