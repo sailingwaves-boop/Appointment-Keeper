@@ -29,6 +29,15 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 /* Loading Screen */
