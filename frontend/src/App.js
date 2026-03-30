@@ -979,12 +979,16 @@ const ChatView = () => {
         const formData = new FormData();
         formData.append('file', selectedFile);
         try {
+          const token = localStorage.getItem('token');
           const uploadRes = await axios.post(`${API_URL}/api/upload`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 
+              'Content-Type': 'multipart/form-data',
+              'Authorization': `Bearer ${token}`
+            }
           });
           imageUrl = uploadRes.data.url;
         } catch (uploadErr) {
-          console.log('File upload skipped');
+          console.log('File upload failed:', uploadErr);
         }
       }
 
