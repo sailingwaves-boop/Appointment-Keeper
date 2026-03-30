@@ -688,19 +688,25 @@ User's name: {current_user['name']}"""
     try:
         # Build message with optional image
         if request.image_url:
+            logger.info(f"Processing image_url: {request.image_url}")
             # Fetch the image and convert to base64
             try:
                 file_id = request.image_url.split('/')[-1]
+                logger.info(f"Looking for file_id: {file_id}")
                 file_doc = await db.uploads.find_one({"id": file_id}, {"_id": 0})
                 if file_doc and file_doc.get("data"):
+                    logger.info(f"Found image, size: {len(file_doc['data'])} chars, type: {file_doc.get('content_type')}")
                     image_content = ImageContent(image_base64=file_doc["data"])
                     user_message = UserMessage(text=request.message, file_contents=[image_content])
+                    logger.info("Created UserMessage with image")
                 else:
+                    logger.warning(f"Image not found in database for id: {file_id}")
                     user_message = UserMessage(text=request.message)
             except Exception as img_err:
                 logger.error(f"Image fetch error: {img_err}")
                 user_message = UserMessage(text=request.message)
         else:
+            logger.info("No image_url provided")
             user_message = UserMessage(text=request.message)
         
         response_text = await chat_instance.send_message(user_message)
