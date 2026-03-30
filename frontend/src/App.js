@@ -31,7 +31,8 @@ import {
   Camera,
   Paperclip,
   Volume2,
-  Code
+  Code,
+  Copy
 } from 'lucide-react';
 import './App.css';
 
@@ -927,6 +928,15 @@ const ChatView = () => {
     }
   };
 
+  // Copy text to clipboard
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success('Copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy');
+    });
+  };
+
   // Parse code blocks in messages
   const parseMessage = (content) => {
     const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
@@ -1127,6 +1137,13 @@ const ChatView = () => {
                       <div className="code-header">
                         <Code size={14} />
                         <span>{part.language}</span>
+                        <button 
+                          className="copy-code-btn"
+                          onClick={() => copyToClipboard(part.content)}
+                          title="Copy code"
+                        >
+                          <Copy size={14} />
+                        </button>
                       </div>
                       <pre><code>{part.content}</code></pre>
                     </div>
@@ -1135,13 +1152,22 @@ const ChatView = () => {
                   )
                 ))}
                 {msg.role === 'assistant' && (
-                  <button 
-                    className="listen-btn" 
-                    onClick={() => speakMessage(msg.content)}
-                    title="Listen to response"
-                  >
-                    <Volume2 size={16} />
-                  </button>
+                  <div className="message-actions">
+                    <button 
+                      className="copy-btn" 
+                      onClick={() => copyToClipboard(msg.content)}
+                      title="Copy message"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <button 
+                      className="listen-btn" 
+                      onClick={() => speakMessage(msg.content)}
+                      title="Listen to response"
+                    >
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

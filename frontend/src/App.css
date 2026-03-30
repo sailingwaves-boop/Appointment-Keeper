@@ -1052,6 +1052,24 @@ body {
   border-bottom: 1px solid #3d3d3d;
 }
 
+.copy-code-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-code-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .code-block pre {
   padding: 1rem;
   margin: 0;
@@ -1064,11 +1082,17 @@ body {
   color: #e0e0e0;
 }
 
-/* Listen button */
-.listen-btn {
+/* Message action buttons */
+.message-actions {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.copy-btn,
+.listen-btn {
   width: 28px;
   height: 28px;
   padding: 0;
@@ -1084,6 +1108,7 @@ body {
   opacity: 0.6;
 }
 
+.copy-btn:hover,
 .listen-btn:hover {
   opacity: 1;
   background: var(--accent);
