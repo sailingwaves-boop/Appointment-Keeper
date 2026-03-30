@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Toaster, toast } from 'sonner';
@@ -48,117 +48,86 @@ const VoiceInput = ({ onTranscription, disabled }) => {
   const chunksRef = useRef([]);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
-  const silenceIntervalRef = useRef(null);
-  const lastSoundTimeRef = useRef(null);
+  const silenceTimerRef = useRef(null);
   const streamRef = useRef(null);
-  const isRecordingRef = useRef(false);
-  const lastTapRef = useRef(0);
 
-  const stopRecording = () => {
-    isRecordingRef.current = false;
+  const stopRecording = useCallback(() => {
     setAudioLevel(0);
-    if (silenceIntervalRef.current) {
-      clearInterval(silenceIntervalRef.current);
-      silenceIntervalRef.current = null;
+    if (silenceTimerRef.current) {
+      clearInterval(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
-  };
+  }, []);
 
   const startRecording = async () => {
+    if (isRecording || isProcessing) return;
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Check supported mime types for mobile compatibility
-      let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
-        } else {
-          mimeType = '';
-        }
+      // Find supported format
+      let mimeType = '';
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
       }
       
       const options = mimeType ? { mimeType } : {};
       mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
-      isRecordingRef.current = true;
 
-      // Set up audio analysis for silence detection and visual feedback
+      // Audio analysis
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
       analyserRef.current.fftSize = 256;
       
-      lastSoundTimeRef.current = Date.now();
+      let lastSoundTime = Date.now();
 
-      // Check for silence every 100ms
-      silenceIntervalRef.current = setInterval(() => {
-        if (!isRecordingRef.current || !analyserRef.current) {
-          clearInterval(silenceIntervalRef.current);
-          return;
-        }
+      silenceTimerRef.current = setInterval(() => {
+        if (!analyserRef.current) return;
         
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
         analyserRef.current.getByteFrequencyData(dataArray);
-        
-        // Calculate average volume
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         
-        // Update visual audio level (0-100)
         setAudioLevel(Math.min(100, average * 2));
         
-        if (average > 10) {
-          // Sound detected
-          lastSoundTimeRef.current = Date.now();
-        } else {
-          // Silence - check if 1.2 seconds passed
-          if (Date.now() - lastSoundTimeRef.current > 1200) {
-            stopRecording();
-          }
+        if (average > 8) {
+          lastSoundTime = Date.now();
+        } else if (Date.now() - lastSoundTime > 1000) {
+          stopRecording();
         }
-      }, 100);
+      }, 50);
 
       mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+        if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        // Clear silence detection
-        if (silenceIntervalRef.current) {
-          clearInterval(silenceIntervalRef.current);
-        }
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-        }
+        if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+        if (audioContextRef.current) audioContextRef.current.close();
         
         setIsProcessing(true);
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
-        
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
 
         try {
           const token = localStorage.getItem('token');
           const response = await axios.post(`${API}/api/voice/transcribe`, formData, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
           });
-          if (response.data.text) {
-            onTranscription(response.data.text);
-          }
+          if (response.data.text) onTranscription(response.data.text);
         } catch (err) {
-          toast.error('Failed to transcribe audio');
+          toast.error('Failed to transcribe');
         } finally {
           setIsProcessing(false);
         }
@@ -175,16 +144,8 @@ const VoiceInput = ({ onTranscription, disabled }) => {
     }
   };
 
-  const handleTap = (e) => {
-    e.preventDefault();
-    
-    // Debounce - ignore taps within 300ms of each other
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      return;
-    }
-    lastTapRef.current = now;
-    
+  const handleClick = () => {
+    if (isProcessing) return;
     if (isRecording) {
       stopRecording();
     } else {
@@ -192,26 +153,20 @@ const VoiceInput = ({ onTranscription, disabled }) => {
     }
   };
 
-  // Calculate glow intensity based on audio level
   const glowStyle = isRecording ? {
-    boxShadow: `0 0 ${10 + audioLevel / 5}px ${audioLevel / 10}px rgba(239, 68, 68, ${0.3 + audioLevel / 200})`
+    boxShadow: `0 0 ${10 + audioLevel / 4}px ${5 + audioLevel / 8}px rgba(239, 68, 68, ${0.4 + audioLevel / 150})`
   } : {};
 
   return (
     <button
       type="button"
       className={`voice-input-btn ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''}`}
-      onTouchEnd={handleTap}
-      onClick={handleTap}
+      onClick={handleClick}
       disabled={disabled || isProcessing}
       style={glowStyle}
       data-testid="voice-input-btn"
     >
-      {isProcessing ? (
-        <div className="voice-spinner" />
-      ) : (
-        <Mic size={20} />
-      )}
+      {isProcessing ? <div className="voice-spinner" /> : <Mic size={20} />}
     </button>
   );
 };
