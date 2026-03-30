@@ -1193,6 +1193,12 @@ const ChatView = () => {
         </div>
       )}
 
+      {/* Agent Status */}
+      <div className={`agent-status ${sending ? 'working' : 'waiting'}`}>
+        <span className="status-dot"></span>
+        <span className="status-text">{sending ? 'Agent is working' : 'Agent is waiting'}</span>
+      </div>
+
       <form onSubmit={sendMessage} className="chat-input-form">
         {/* Hidden file inputs */}
         <input
