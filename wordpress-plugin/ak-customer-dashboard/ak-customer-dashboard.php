@@ -20,6 +20,12 @@ define('AK_DASHBOARD_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Include signup handler
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-signup-handler.php';
 
+// Include billing handler
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-stripe-billing.php';
+
+// Include admin settings
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-admin-settings.php';
+
 class AK_Customer_Dashboard {
     
     private static $instance = null;
@@ -38,6 +44,9 @@ class AK_Customer_Dashboard {
         
         // Initialize signup handler
         new AK_Signup_Handler();
+        
+        // Initialize billing handler
+        new AK_Stripe_Billing();
     }
     
     public function init() {

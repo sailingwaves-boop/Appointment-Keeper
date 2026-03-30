@@ -1,0 +1,453 @@
+/**
+ * AppointmentKeeper Billing Page Styles
+ */
+
+.ak-billing-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.ak-billing-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.ak-billing-header h1 {
+    font-size: 36px;
+    color: #1e3a5f;
+    margin: 0 0 10px 0;
+}
+
+.ak-billing-header p {
+    font-size: 18px;
+    color: #666;
+    margin: 0;
+}
+
+.ak-trial-note {
+    background: #e8f4fd;
+    color: #1e3a5f;
+    padding: 12px 20px;
+    border-radius: 50px;
+    display: inline-block;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+/* Plans Grid */
+.ak-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+    margin-bottom: 50px;
+}
+
+@media (max-width: 1024px) {
+    .ak-plans-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .ak-plans-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Plan Card */
+.ak-plan-card {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 30px 25px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.ak-plan-card:hover {
+    border-color: #1e3a5f;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(30, 58, 95, 0.15);
+}
+
+.ak-plan-card.selected {
+    border-color: #1e3a5f;
+    background: #f8fbff;
+}
+
+.ak-plan-card.ak-popular {
+    border-color: #1e3a5f;
+}
+
+.ak-popular-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: white;
+    padding: 6px 20px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.ak-plan-name {
+    font-size: 22px;
+    color: #1e3a5f;
+    margin: 0 0 15px 0;
+}
+
+.ak-plan-price {
+    margin-bottom: 25px;
+}
+
+.ak-currency {
+    font-size: 24px;
+    color: #1e3a5f;
+    vertical-align: top;
+}
+
+.ak-amount {
+    font-size: 48px;
+    font-weight: 700;
+    color: #1e3a5f;
+    line-height: 1;
+}
+
+.ak-period {
+    font-size: 16px;
+    color: #888;
+}
+
+.ak-plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 25px 0;
+    text-align: left;
+}
+
+.ak-plan-features li {
+    padding: 8px 0;
+    color: #555;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.ak-plan-features li:last-child {
+    border-bottom: none;
+}
+
+.ak-plan-features li::before {
+    content: "✓";
+    color: #28a745;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.ak-select-plan-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: #fff;
+    border: 2px solid #1e3a5f;
+    border-radius: 50px;
+    color: #1e3a5f;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ak-select-plan-btn:hover,
+.ak-plan-card.selected .ak-select-plan-btn {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: white;
+    border-color: #1e3a5f;
+}
+
+/* Addon Section */
+.ak-addon-section {
+    margin-bottom: 50px;
+}
+
+.ak-addon-section h2 {
+    text-align: center;
+    color: #1e3a5f;
+    margin-bottom: 25px;
+}
+
+.ak-addon-card {
+    background: linear-gradient(135deg, #f8fbff 0%, #e8f4fd 100%);
+    border: 2px solid #c5dff8;
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 30px;
+}
+
+@media (max-width: 768px) {
+    .ak-addon-card {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+.ak-addon-info h3 {
+    color: #1e3a5f;
+    margin: 0 0 10px 0;
+    font-size: 22px;
+}
+
+.ak-addon-info p {
+    color: #555;
+    margin: 0 0 15px 0;
+}
+
+.ak-addon-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ak-addon-features li {
+    background: white;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 13px;
+    color: #1e3a5f;
+}
+
+.ak-addon-price {
+    text-align: center;
+    min-width: 150px;
+}
+
+.ak-addon-amount {
+    display: block;
+    font-size: 36px;
+    font-weight: 700;
+    color: #1e3a5f;
+}
+
+.ak-addon-period {
+    color: #888;
+    font-size: 14px;
+}
+
+/* Toggle Switch */
+.ak-addon-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+.ak-addon-toggle input {
+    display: none;
+}
+
+.ak-toggle-slider {
+    width: 50px;
+    height: 26px;
+    background: #ccc;
+    border-radius: 50px;
+    position: relative;
+    transition: background 0.3s;
+}
+
+.ak-toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.ak-addon-toggle input:checked + .ak-toggle-slider {
+    background: #1e3a5f;
+}
+
+.ak-addon-toggle input:checked + .ak-toggle-slider::after {
+    transform: translateX(24px);
+}
+
+.ak-toggle-label {
+    font-weight: 600;
+    color: #1e3a5f;
+}
+
+/* Order Summary */
+.ak-order-summary {
+    background: #fff;
+    border: 2px solid #1e3a5f;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    margin: 0 auto 40px;
+}
+
+.ak-order-summary h3 {
+    color: #1e3a5f;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.ak-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ak-summary-row:last-of-type {
+    border-bottom: none;
+}
+
+.ak-summary-label {
+    color: #666;
+}
+
+.ak-summary-value {
+    font-weight: 600;
+    color: #333;
+}
+
+.ak-total-row {
+    border-top: 2px solid #1e3a5f;
+    margin-top: 10px;
+    padding-top: 15px;
+}
+
+.ak-total-row .ak-summary-label,
+.ak-total-row .ak-summary-value {
+    font-size: 18px;
+    color: #1e3a5f;
+}
+
+.ak-trial-reminder {
+    text-align: center;
+    color: #28a745;
+    font-size: 14px;
+    margin: 15px 0;
+}
+
+.ak-checkout-btn {
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    border: none;
+    border-radius: 50px;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ak-checkout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(30, 58, 95, 0.4);
+}
+
+.ak-checkout-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Footer */
+.ak-billing-footer {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+}
+
+/* Loading State */
+.ak-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.ak-loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #1e3a5f;
+    border-radius: 50%;
+    animation: ak-spin 1s linear infinite;
+}
+
+@keyframes ak-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Success/Error Messages */
+.ak-payment-message {
+    text-align: center;
+    padding: 40px;
+    background: #fff;
+    border-radius: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.ak-payment-message.success {
+    border: 2px solid #28a745;
+}
+
+.ak-payment-message.error {
+    border: 2px solid #dc3545;
+}
+
+.ak-payment-message h2 {
+    margin: 0 0 15px 0;
+}
+
+.ak-payment-message.success h2 {
+    color: #28a745;
+}
+
+.ak-payment-message.error h2 {
+    color: #dc3545;
+}
+
+.ak-payment-message p {
+    color: #666;
+    margin: 0 0 20px 0;
+}
+
+.ak-payment-message a {
+    display: inline-block;
+    padding: 12px 30px;
+    background: #1e3a5f;
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+}
