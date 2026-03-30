@@ -102,7 +102,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         
         if (average > 8) {
           lastSoundTime = Date.now();
-        } else if (Date.now() - lastSoundTime > 1000) {
+        } else if (Date.now() - lastSoundTime > 500) {
           stopRecording();
         }
       }, 50);
