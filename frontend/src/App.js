@@ -1460,6 +1460,7 @@ const MemoryView = () => {
 
 // Phone & SMS View
 const PhoneView = () => {
+  const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('send');
   const [contacts, setContacts] = useState([]);
   const [subscription, setSubscription] = useState(null);
@@ -1484,18 +1485,21 @@ const PhoneView = () => {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
       const [contactsRes, subRes, callsRes, smsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/contacts`),
-        axios.get(`${API_URL}/api/subscription/status`),
-        axios.get(`${API_URL}/api/call/history`).catch(() => ({ data: { calls: [] } })),
-        axios.get(`${API_URL}/api/sms/history`).catch(() => ({ data: { messages: [] } }))
+        axios.get(`${API_URL}/api/contacts`, { headers }),
+        axios.get(`${API_URL}/api/subscription/status`, { headers }),
+        axios.get(`${API_URL}/api/call/history`, { headers }).catch(() => ({ data: { calls: [] } })),
+        axios.get(`${API_URL}/api/sms/history`, { headers }).catch(() => ({ data: { messages: [] } }))
       ]);
-      setContacts(contactsRes.data);
-      setSubscription(subRes.data);
-      setCallHistory(callsRes.data.calls || []);
-      setSmsHistory(smsRes.data.messages || []);
+      setContacts(contactsRes.data || []);
+      setSubscription(subRes.data || {});
+      setCallHistory(callsRes.data?.calls || []);
+      setSmsHistory(smsRes.data?.messages || []);
     } catch (err) {
-      console.error('Failed to load data');
+      console.error('Failed to load phone data:', err);
     } finally {
       setLoading(false);
     }

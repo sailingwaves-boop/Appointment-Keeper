@@ -1961,6 +1961,8 @@ body {
 .phone-view {
   padding: 1.5rem;
   max-width: 800px;
+  min-height: 100vh;
+  background: var(--bg-primary);
 }
 
 .usage-badges {
