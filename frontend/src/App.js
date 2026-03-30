@@ -987,7 +987,9 @@ const ChatView = () => {
             }
           });
           imageUrl = uploadRes.data.url;
+          toast.success('Image uploaded');
         } catch (uploadErr) {
+          toast.error('Image upload failed');
           console.log('File upload failed:', uploadErr);
         }
       }
