@@ -859,9 +859,9 @@ body {
 
 .message {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  gap: 1rem;
   max-width: 100%;
+  width: 100%;
 }
 
 .message.user {
@@ -869,8 +869,8 @@ body {
 }
 
 .message-avatar {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   background: var(--bg-tertiary);
   display: flex;
@@ -891,13 +891,11 @@ body {
 
 .message-content {
   background: var(--bg-secondary);
-  padding: 12px 14px;
+  padding: 1rem 1.25rem;
   border-radius: 12px;
   border: 1px solid var(--border);
-  max-width: calc(100% - 45px);
+  max-width: 85%;
   position: relative;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
 }
 
 .message.user .message-content {
