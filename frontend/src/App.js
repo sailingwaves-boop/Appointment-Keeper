@@ -118,8 +118,8 @@ const VoiceInput = ({ onTranscription, disabled }) => {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
-          // Silence - check if 1.5 seconds passed
-          if (Date.now() - lastSoundTimeRef.current > 1500) {
+          // Silence - check if 0.8 seconds passed
+          if (Date.now() - lastSoundTimeRef.current > 800) {
             stopRecording();
           }
         }
