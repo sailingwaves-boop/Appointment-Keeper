@@ -52,6 +52,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
   const lastSoundTimeRef = useRef(null);
   const streamRef = useRef(null);
   const isRecordingRef = useRef(false);
+  const lastTapRef = useRef(0);
 
   const stopRecording = () => {
     isRecordingRef.current = false;
@@ -97,7 +98,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
       
       lastSoundTimeRef.current = Date.now();
 
-      // Check for silence every 200ms using interval
+      // Check for silence every 100ms
       silenceIntervalRef.current = setInterval(() => {
         if (!isRecordingRef.current || !analyserRef.current) {
           clearInterval(silenceIntervalRef.current);
@@ -117,7 +118,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
-          // Silence - check if 3 seconds passed (reduced from 5)
+          // Silence - check if 3 seconds passed
           if (Date.now() - lastSoundTimeRef.current > 3000) {
             stopRecording();
           }
@@ -167,10 +168,27 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         }
       };
 
-      mediaRecorderRef.current.start(100); // Collect data every 100ms
+      mediaRecorderRef.current.start(100);
       setIsRecording(true);
     } catch (err) {
       toast.error('Microphone access denied');
+    }
+  };
+
+  const handleTap = (e) => {
+    e.preventDefault();
+    
+    // Debounce - ignore taps within 300ms of each other
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      return;
+    }
+    lastTapRef.current = now;
+    
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -183,7 +201,8 @@ const VoiceInput = ({ onTranscription, disabled }) => {
     <button
       type="button"
       className={`voice-input-btn ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''}`}
-      onClick={isRecording ? stopRecording : startRecording}
+      onTouchEnd={handleTap}
+      onClick={handleTap}
       disabled={disabled || isProcessing}
       style={glowStyle}
       data-testid="voice-input-btn"
