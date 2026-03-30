@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 from emergentintegrations.llm.openai import OpenAISpeechToText
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
@@ -97,6 +97,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    image_url: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -685,7 +686,23 @@ User's name: {current_user['name']}"""
     
     # Send message and get response
     try:
-        user_message = UserMessage(text=request.message)
+        # Build message with optional image
+        if request.image_url:
+            # Fetch the image and convert to base64
+            try:
+                file_id = request.image_url.split('/')[-1]
+                file_doc = await db.uploads.find_one({"id": file_id}, {"_id": 0})
+                if file_doc and file_doc.get("data"):
+                    image_content = ImageContent(image_base64=file_doc["data"])
+                    user_message = UserMessage(text=request.message, file_contents=[image_content])
+                else:
+                    user_message = UserMessage(text=request.message)
+            except Exception as img_err:
+                logger.error(f"Image fetch error: {img_err}")
+                user_message = UserMessage(text=request.message)
+        else:
+            user_message = UserMessage(text=request.message)
+        
         response_text = await chat_instance.send_message(user_message)
         
         # Save conversation to database
