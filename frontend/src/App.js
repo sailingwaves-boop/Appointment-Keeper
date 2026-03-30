@@ -118,8 +118,8 @@ const VoiceInput = ({ onTranscription, disabled }) => {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
-          // Silence - check if 3 seconds passed
-          if (Date.now() - lastSoundTimeRef.current > 3000) {
+          // Silence - check if 1.5 seconds passed
+          if (Date.now() - lastSoundTimeRef.current > 1500) {
             stopRecording();
           }
         }
@@ -209,8 +209,6 @@ const VoiceInput = ({ onTranscription, disabled }) => {
     >
       {isProcessing ? (
         <div className="voice-spinner" />
-      ) : isRecording ? (
-        <MicOff size={20} />
       ) : (
         <Mic size={20} />
       )}
