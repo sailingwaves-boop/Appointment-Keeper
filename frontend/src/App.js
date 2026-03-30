@@ -114,12 +114,12 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         // Update visual audio level (0-100)
         setAudioLevel(Math.min(100, average * 2));
         
-        if (average > 15) {
+        if (average > 10) {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
-          // Silence - check if 0.8 seconds passed
-          if (Date.now() - lastSoundTimeRef.current > 800) {
+          // Silence - check if 1.2 seconds passed
+          if (Date.now() - lastSoundTimeRef.current > 1200) {
             stopRecording();
           }
         }
