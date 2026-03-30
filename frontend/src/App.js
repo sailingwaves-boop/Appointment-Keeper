@@ -43,6 +43,7 @@ const API = API_URL;
 const VoiceInput = ({ onTranscription, disabled }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const audioContextRef = useRef(null);
@@ -54,6 +55,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
 
   const stopRecording = () => {
     isRecordingRef.current = false;
+    setAudioLevel(0);
     if (silenceIntervalRef.current) {
       clearInterval(silenceIntervalRef.current);
       silenceIntervalRef.current = null;
@@ -68,11 +70,25 @@ const VoiceInput = ({ onTranscription, disabled }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      
+      // Check supported mime types for mobile compatibility
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        } else {
+          mimeType = '';
+        }
+      }
+      
+      const options = mimeType ? { mimeType } : {};
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
       isRecordingRef.current = true;
 
-      // Set up audio analysis for silence detection
+      // Set up audio analysis for silence detection and visual feedback
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
       const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -94,16 +110,19 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         // Calculate average volume
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         
+        // Update visual audio level (0-100)
+        setAudioLevel(Math.min(100, average * 2));
+        
         if (average > 15) {
           // Sound detected
           lastSoundTimeRef.current = Date.now();
         } else {
-          // Silence - check if 5 seconds passed
-          if (Date.now() - lastSoundTimeRef.current > 5000) {
+          // Silence - check if 3 seconds passed (reduced from 5)
+          if (Date.now() - lastSoundTimeRef.current > 3000) {
             stopRecording();
           }
         }
-      }, 200);
+      }, 100);
 
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -121,7 +140,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         }
         
         setIsProcessing(true);
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
@@ -148,12 +167,17 @@ const VoiceInput = ({ onTranscription, disabled }) => {
         }
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.start(100); // Collect data every 100ms
       setIsRecording(true);
     } catch (err) {
       toast.error('Microphone access denied');
     }
   };
+
+  // Calculate glow intensity based on audio level
+  const glowStyle = isRecording ? {
+    boxShadow: `0 0 ${10 + audioLevel / 5}px ${audioLevel / 10}px rgba(239, 68, 68, ${0.3 + audioLevel / 200})`
+  } : {};
 
   return (
     <button
@@ -161,6 +185,7 @@ const VoiceInput = ({ onTranscription, disabled }) => {
       className={`voice-input-btn ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''}`}
       onClick={isRecording ? stopRecording : startRecording}
       disabled={disabled || isProcessing}
+      style={glowStyle}
       data-testid="voice-input-btn"
     >
       {isProcessing ? (
