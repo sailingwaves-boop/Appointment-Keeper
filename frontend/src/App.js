@@ -902,6 +902,7 @@ const ChatView = () => {
     if (file) {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      toast.success('Photo captured');
     }
   };
 
@@ -959,6 +960,8 @@ const ChatView = () => {
   const sendMessage = async (e) => {
     e.preventDefault();
     if ((!input.trim() && !selectedFile) || sending) return;
+    
+    toast.info(selectedFile ? 'Sending with image...' : 'Sending...');
 
     const userMessage = input.trim() || "What do you see in this image?";
     setInput('');
