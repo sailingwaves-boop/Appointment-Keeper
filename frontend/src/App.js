@@ -1238,6 +1238,12 @@ const ChatView = () => {
         </div>
       )}
 
+      {/* Agent Status */}
+      <div className={`agent-status ${sending ? 'working' : 'waiting'}`}>
+        <span className="status-dot"></span>
+        <span className="status-text">{sending ? 'Agent is working' : 'Agent is waiting'}</span>
+      </div>
+
       <form onSubmit={sendMessage} className="chat-input-form">
         {/* Hidden file inputs */}
         <input
@@ -1283,17 +1289,15 @@ const ChatView = () => {
         />
         
         {/* Text input */}
-        <div className={`chat-input-wrapper ${sending ? 'ai-thinking' : ''}`}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={sending ? "AI is thinking..." : "AI waiting..."}
-            disabled={sending}
-            data-testid="chat-input"
-          />
-        </div>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type or speak..."
+          disabled={sending}
+          data-testid="chat-input"
+        />
         
         {/* Send button with up arrow */}
         <button type="submit" disabled={sending || (!input.trim() && !selectedFile)} data-testid="send-message-btn">
