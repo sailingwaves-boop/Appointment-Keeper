@@ -1283,15 +1283,17 @@ const ChatView = () => {
         />
         
         {/* Text input */}
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type or speak your message..."
-          disabled={sending}
-          data-testid="chat-input"
-        />
+        <div className={`chat-input-wrapper ${sending ? 'ai-thinking' : ''}`}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={sending ? "AI is thinking..." : "AI waiting..."}
+            disabled={sending}
+            data-testid="chat-input"
+          />
+        </div>
         
         {/* Send button with up arrow */}
         <button type="submit" disabled={sending || (!input.trim() && !selectedFile)} data-testid="send-message-btn">
