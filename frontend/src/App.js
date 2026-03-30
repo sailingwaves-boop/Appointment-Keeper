@@ -960,7 +960,7 @@ const ChatView = () => {
     e.preventDefault();
     if ((!input.trim() && !selectedFile) || sending) return;
 
-    const userMessage = input.trim();
+    const userMessage = input.trim() || "What do you see in this image?";
     setInput('');
     
     // Create message with optional image
@@ -992,10 +992,13 @@ const ChatView = () => {
         }
       }
 
+      const token = localStorage.getItem('token');
       const res = await axios.post(`${API_URL}/api/chat`, {
         message: userMessage,
         session_id: sessionId,
         image_url: imageUrl
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (!sessionId) {
