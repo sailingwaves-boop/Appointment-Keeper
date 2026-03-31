@@ -189,17 +189,19 @@ class AK_Stripe_Billing {
             
             <!-- Helper Addon Section -->
             <div class="ak-addon-section">
-                <h2>Supercharge Your Experience</h2>
+                <h2>Want It Done For You?</h2>
                 <div class="ak-addon-card">
                     <div class="ak-addon-info">
                         <h3>AppointmentKeeper Helper</h3>
-                        <p>Your AI assistant that manages appointments, sends reminders, and provides GPS directions - all through simple chat commands.</p>
+                        <p>All the features above work without the helper - you can manage everything yourself. But if you want an AI assistant to do it all for you, add the Helper.</p>
+                        <p style="font-weight:600;margin-top:10px;">Just tell it what you need and it handles the rest:</p>
                         <ul class="ak-addon-features">
-                            <li>Make appointments via chat</li>
-                            <li>Organise call & text reminders</li>
-                            <li>GPS directions to appointments</li>
-                            <li>Birthday & anniversary messages</li>
+                            <li>Book appointments for you</li>
+                            <li>Set up reminders automatically</li>
+                            <li>Send GPS directions</li>
+                            <li>Schedule birthday messages</li>
                         </ul>
+                        <p style="font-size:13px;color:#666;margin-top:10px;">Optional - everything works without it, the Helper just saves you time.</p>
                     </div>
                     <div class="ak-addon-price">
                         <span class="ak-addon-amount">+£12</span>

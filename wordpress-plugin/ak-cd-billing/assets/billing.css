@@ -58,8 +58,8 @@
 
 /* Plan Card */
 .ak-plan-card {
-    background: #fff;
-    border: 2px solid #e0e0e0;
+    background: #e8f4fd;
+    border: 2px solid #c5dff8;
     border-radius: 20px;
     padding: 30px 25px;
     text-align: center;
@@ -76,7 +76,7 @@
 
 .ak-plan-card.selected {
     border-color: #1e3a5f;
-    background: #f8fbff;
+    background: #d0e8f7;
 }
 
 .ak-plan-card.ak-popular {
