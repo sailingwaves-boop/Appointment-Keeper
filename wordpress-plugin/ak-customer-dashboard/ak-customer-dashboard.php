@@ -42,11 +42,23 @@ class AK_Customer_Dashboard {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
         add_shortcode('ak_customer_dashboard', array($this, 'render_dashboard'));
         
+        // Add settings link on plugins page
+        add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_settings_link'));
+        
         // Initialize signup handler
         new AK_Signup_Handler();
         
         // Initialize billing handler
         new AK_Stripe_Billing();
+    }
+    
+    /**
+     * Add settings link on plugins page
+     */
+    public function add_settings_link($links) {
+        $settings_link = '<a href="' . admin_url('options-general.php?page=ak-dashboard-settings') . '">Settings</a>';
+        array_unshift($links, $settings_link);
+        return $links;
     }
     
     public function init() {
