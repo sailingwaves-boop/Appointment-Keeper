@@ -53,9 +53,12 @@ class AK_Dashboard_Admin_Settings {
                     <tr>
                         <th scope="row">Secret Key</th>
                         <td>
-                            <input type="password" name="ak_stripe_secret_key" 
-                                   value="<?php echo esc_attr(get_option('ak_stripe_secret_key')); ?>" 
-                                   class="regular-text" placeholder="sk_live_...">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="password" name="ak_stripe_secret_key" id="ak_secret_key"
+                                       value="<?php echo esc_attr(get_option('ak_stripe_secret_key')); ?>" 
+                                       class="regular-text" placeholder="sk_live_...">
+                                <button type="button" onclick="var f=document.getElementById('ak_secret_key');f.type=f.type==='password'?'text':'password';this.textContent=f.type==='password'?'Show':'Hide';" style="cursor:pointer;">Show</button>
+                            </div>
                             <p class="description">Starts with sk_live_ or sk_test_</p>
                         </td>
                     </tr>
