@@ -102,7 +102,20 @@ class AK_Stripe_Billing {
     }
     
     public function enqueue_assets() {
-        if (!is_page('choose-plan')) {
+        global $post;
+        
+        // Load on choose-plan page or any page with shortcode
+        $load_assets = false;
+        
+        if (is_page('choose-plan')) {
+            $load_assets = true;
+        }
+        
+        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ak_plan_selection')) {
+            $load_assets = true;
+        }
+        
+        if (!$load_assets) {
             return;
         }
         
