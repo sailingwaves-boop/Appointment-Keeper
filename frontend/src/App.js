@@ -2372,7 +2372,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-center" richColors toastOptions={{ style: { marginTop: '50px' } }} />
         <AppRoutes />
       </AuthProvider>
     </Router>
