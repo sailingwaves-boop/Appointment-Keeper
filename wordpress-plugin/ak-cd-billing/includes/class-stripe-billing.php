@@ -171,10 +171,16 @@ class AK_Stripe_Billing {
             </div>
             
             <div class="ak-plans-grid">
-                <?php foreach ($this->plans as $plan_id => $plan): ?>
-                <div class="ak-plan-card <?php echo $plan_id === 'standard' ? 'ak-popular' : ''; ?>" data-plan="<?php echo esc_attr($plan_id); ?>">
+                <?php foreach ($this->plans as $plan_id => $plan): 
+                    $is_premium = ($plan_id === 'premium');
+                    $is_enterprise = ($plan_id === 'enterprise');
+                ?>
+                <div class="ak-plan-card <?php echo $plan_id === 'standard' ? 'ak-popular' : ''; ?> <?php echo $is_enterprise ? 'ak-best-value' : ''; ?>" data-plan="<?php echo esc_attr($plan_id); ?>">
                     <?php if ($plan_id === 'standard'): ?>
                     <div class="ak-popular-badge">Most Popular</div>
+                    <?php endif; ?>
+                    <?php if ($is_enterprise): ?>
+                    <div class="ak-best-badge">Best Value</div>
                     <?php endif; ?>
                     
                     <h3 class="ak-plan-name"><?php echo esc_html($plan['name']); ?></h3>
@@ -191,7 +197,21 @@ class AK_Stripe_Billing {
                         <li>Amelia integration</li>
                         <li>Debt tracking</li>
                         <li>Customer dashboard</li>
+                        <?php if ($is_premium): ?>
+                        <li class="ak-feature-highlight">Team feature - up to 3 members</li>
+                        <?php endif; ?>
+                        <?php if ($is_enterprise): ?>
+                        <li class="ak-feature-highlight">Team feature - unlimited members</li>
+                        <li class="ak-feature-highlight">Helper included free</li>
+                        <?php endif; ?>
                     </ul>
+                    
+                    <?php if (!$is_enterprise): ?>
+                    <label class="ak-helper-checkbox">
+                        <input type="checkbox" class="ak-add-helper" data-plan="<?php echo esc_attr($plan_id); ?>">
+                        <span>Add Helper +£12/month</span>
+                    </label>
+                    <?php endif; ?>
                     
                     <button class="ak-select-plan-btn" data-plan="<?php echo esc_attr($plan_id); ?>">
                         Start Free Trial
@@ -200,57 +220,23 @@ class AK_Stripe_Billing {
                 <?php endforeach; ?>
             </div>
             
-            <!-- Helper Addon Section -->
+            <!-- Helper Info Section -->
             <div class="ak-addon-section">
-                <h2>Want It Done For You?</h2>
+                <h2>Automate everything by adding the helper</h2>
                 <div class="ak-addon-card">
                     <div class="ak-addon-info">
                         <h3>AppointmentKeeper Helper</h3>
-                        <p>All the features above work without the helper - you can manage everything yourself. But if you want an AI assistant to do it all for you, add the Helper.</p>
-                        <p style="font-weight:600;margin-top:10px;">Just tell it what you need and it handles the rest:</p>
+                        <p>All features work without the helper - you can manage everything yourself. The helper just automates it for you.</p>
+                        <p style="font-weight:600;margin-top:10px;">Just tell it what you need:</p>
                         <ul class="ak-addon-features">
                             <li>Book appointments for you</li>
                             <li>Set up reminders automatically</li>
                             <li>Send GPS directions</li>
                             <li>Schedule birthday messages</li>
                         </ul>
-                        <p style="font-size:13px;color:#666;margin-top:10px;">Optional - everything works without it, the Helper just saves you time.</p>
-                    </div>
-                    <div class="ak-addon-price">
-                        <span class="ak-addon-amount">+£12</span>
-                        <span class="ak-addon-period">/month</span>
-                        <label class="ak-addon-toggle">
-                            <input type="checkbox" id="ak-helper-addon" name="helper_addon">
-                            <span class="ak-toggle-slider"></span>
-                            <span class="ak-toggle-label">Add Helper</span>
-                        </label>
+                        <p style="font-size:13px;color:#666;margin-top:10px;">Optional for Basic, Standard, Premium (+£12/month). Included free with Enterprise.</p>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Order Summary -->
-            <div class="ak-order-summary" style="display: none;">
-                <h3>Order Summary</h3>
-                <div class="ak-summary-row">
-                    <span class="ak-summary-label">Plan:</span>
-                    <span class="ak-summary-value" id="ak-selected-plan-name">-</span>
-                </div>
-                <div class="ak-summary-row">
-                    <span class="ak-summary-label">Plan Price:</span>
-                    <span class="ak-summary-value" id="ak-selected-plan-price">-</span>
-                </div>
-                <div class="ak-summary-row ak-addon-row" style="display: none;">
-                    <span class="ak-summary-label">Helper Addon:</span>
-                    <span class="ak-summary-value">£12.00/month</span>
-                </div>
-                <div class="ak-summary-row ak-total-row">
-                    <span class="ak-summary-label">Total after trial:</span>
-                    <span class="ak-summary-value" id="ak-total-price">-</span>
-                </div>
-                <p class="ak-trial-reminder">You won't be charged during your 3-day trial</p>
-                <button id="ak-checkout-btn" class="ak-checkout-btn">
-                    Start 3-Day Free Trial
-                </button>
             </div>
             
             <div class="ak-billing-footer">

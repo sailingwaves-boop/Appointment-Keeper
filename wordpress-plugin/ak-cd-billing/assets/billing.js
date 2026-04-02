@@ -12,7 +12,7 @@
             basic: { name: 'Basic', price: 9.99 },
             standard: { name: 'Standard', price: 24.99 },
             premium: { name: 'Premium', price: 49.99 },
-            enterprise: { name: 'Enterprise', price: 149.99 }
+            enterprise: { name: 'Enterprise', price: 149.99, helperIncluded: true }
         },
         helperPrice: 12.00,
         
@@ -24,22 +24,22 @@
         bindEvents: function() {
             var self = this;
             
-            // Plan selection
-            $(document).on('click', '.ak-plan-card, .ak-select-plan-btn', function(e) {
+            // Plan selection - click button to go to checkout
+            $(document).on('click', '.ak-select-plan-btn', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
-                var planId = $(this).closest('.ak-plan-card').data('plan') || $(this).data('plan');
-                self.selectPlan(planId);
+                var planId = $(this).data('plan');
+                self.selectPlanAndCheckout(planId);
             });
             
-            // Helper addon toggle
-            $(document).on('change', '#ak-helper-addon', function() {
-                self.includeHelper = $(this).is(':checked');
-                self.updateSummary();
+            // Prevent card click from triggering checkout
+            $(document).on('click', '.ak-plan-card', function(e) {
+                // Do nothing - only button click triggers checkout
             });
             
-            // Checkout button
-            $(document).on('click', '#ak-checkout-btn', function() {
-                self.initiateCheckout();
+            // Helper checkbox change
+            $(document).on('change', '.ak-add-helper', function() {
+                // Just update visual state, actual value checked at checkout
             });
         },
         
@@ -58,44 +58,21 @@
             }
         },
         
-        selectPlan: function(planId) {
+        selectPlanAndCheckout: function(planId) {
             if (!this.plans[planId]) return;
             
             this.selectedPlan = planId;
             
-            // Update UI
-            $('.ak-plan-card').removeClass('selected');
-            $('.ak-plan-card[data-plan="' + planId + '"]').addClass('selected');
-            
-            // Enterprise includes helper free
-            if (planId === 'enterprise') {
+            // Check if helper is included or selected
+            if (this.plans[planId].helperIncluded) {
                 this.includeHelper = true;
-                $('#ak-helper-addon').prop('checked', true).prop('disabled', true);
             } else {
-                $('#ak-helper-addon').prop('disabled', false);
+                var $checkbox = $('.ak-plan-card[data-plan="' + planId + '"] .ak-add-helper');
+                this.includeHelper = $checkbox.is(':checked');
             }
             
             // Go directly to checkout
             this.initiateCheckout();
-        },
-        
-        updateSummary: function() {
-            if (!this.selectedPlan) return;
-            
-            var plan = this.plans[this.selectedPlan];
-            var total = plan.price;
-            
-            $('#ak-selected-plan-name').text(plan.name + ' Plan');
-            $('#ak-selected-plan-price').text('£' + plan.price.toFixed(2) + '/month');
-            
-            if (this.includeHelper) {
-                total += this.helperPrice;
-                $('.ak-addon-row').show();
-            } else {
-                $('.ak-addon-row').hide();
-            }
-            
-            $('#ak-total-price').text('£' + total.toFixed(2) + '/month');
         },
         
         initiateCheckout: function() {
@@ -105,7 +82,7 @@
             }
             
             var self = this;
-            var $btn = $('#ak-checkout-btn');
+            var $btn = $('.ak-plan-card[data-plan="' + this.selectedPlan + '"] .ak-select-plan-btn');
             var btnText = $btn.text();
             
             $btn.prop('disabled', true).text('Processing...');
@@ -121,7 +98,6 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Redirect to Stripe checkout
                         window.location.href = response.data.checkout_url;
                     } else {
                         alert(response.data.message || 'Could not start checkout. Please try again.');
@@ -137,11 +113,7 @@
         
         handlePaymentSuccess: function(sessionId) {
             var self = this;
-            
-            // Show loading
             this.showLoading();
-            
-            // Poll for payment status
             this.pollPaymentStatus(sessionId, 0);
         },
         
@@ -178,7 +150,6 @@
                                 response.data.redirect
                             );
                         } else {
-                            // Keep polling
                             setTimeout(function() {
                                 self.pollPaymentStatus(sessionId, attempts + 1);
                             }, 2000);
