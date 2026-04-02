@@ -67,10 +67,16 @@
             $('.ak-plan-card').removeClass('selected');
             $('.ak-plan-card[data-plan="' + planId + '"]').addClass('selected');
             
-            // Show summary
-            $('.ak-order-summary').show();
+            // Enterprise includes helper free
+            if (planId === 'enterprise') {
+                this.includeHelper = true;
+                $('#ak-helper-addon').prop('checked', true).prop('disabled', true);
+            } else {
+                $('#ak-helper-addon').prop('disabled', false);
+            }
             
-            this.updateSummary();
+            // Go directly to checkout
+            this.initiateCheckout();
         },
         
         updateSummary: function() {
