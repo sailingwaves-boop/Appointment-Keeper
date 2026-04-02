@@ -102,20 +102,8 @@ class AK_Stripe_Billing {
     }
     
     public function enqueue_assets() {
-        global $post;
-        
-        // Load on choose-plan page or any page with shortcode
-        $load_assets = false;
-        
-        if (is_page('choose-plan')) {
-            $load_assets = true;
-        }
-        
-        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ak_plan_selection')) {
-            $load_assets = true;
-        }
-        
-        if (!$load_assets) {
+        // Always load on frontend - JS will only run if elements exist
+        if (is_admin()) {
             return;
         }
         
@@ -130,7 +118,7 @@ class AK_Stripe_Billing {
             'ak-billing',
             AK_DASHBOARD_PLUGIN_URL . 'assets/billing.js',
             array('jquery'),
-            AK_DASHBOARD_VERSION,
+            AK_DASHBOARD_VERSION . '.' . time(),
             true
         );
         
@@ -226,7 +214,7 @@ class AK_Stripe_Billing {
                 <div class="ak-addon-card">
                     <div class="ak-addon-info">
                         <h3>AppointmentKeeper Helper</h3>
-                        <p>All features work without the helper - you can manage everything yourself. The helper just automates it for you.</p>
+                        <p>Every feature is fully usable on its own, giving you complete hands-on control. But when efficiency matters, the helper takes over—automating the busywork, reducing errors, and freeing you up to focus on what actually matters.</p>
                         <p style="font-weight:600;margin-top:10px;">Just tell it what you need:</p>
                         <ul class="ak-addon-features">
                             <li>Book appointments for you</li>

@@ -17,29 +17,23 @@
         helperPrice: 12.00,
         
         init: function() {
+            console.log('AKBilling init');
             this.bindEvents();
             this.checkUrlParams();
         },
         
         bindEvents: function() {
             var self = this;
+            console.log('AKBilling binding events');
             
             // Plan selection - click button to go to checkout
             $(document).on('click', '.ak-select-plan-btn', function(e) {
+                console.log('Button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 var planId = $(this).data('plan');
+                console.log('Plan selected:', planId);
                 self.selectPlanAndCheckout(planId);
-            });
-            
-            // Prevent card click from triggering checkout
-            $(document).on('click', '.ak-plan-card', function(e) {
-                // Do nothing - only button click triggers checkout
-            });
-            
-            // Helper checkbox change
-            $(document).on('change', '.ak-add-helper', function() {
-                // Just update visual state, actual value checked at checkout
             });
         },
         
