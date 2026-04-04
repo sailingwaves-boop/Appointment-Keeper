@@ -119,6 +119,81 @@
             });
         });
         
+        // Test booking confirmation
+        $('#ak-test-confirmation').on('click', function() {
+            var btn = $(this);
+            var resultSpan = $('#ak-confirm-result');
+            var phone = $('#ak-test-confirm-phone').val();
+            var email = $('#ak-test-confirm-email').val();
+            
+            btn.prop('disabled', true);
+            resultSpan.removeClass('success error').addClass('loading').text('Sending...');
+            
+            $.ajax({
+                url: akAdminData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'ak_test_booking_confirmation',
+                    phone: phone,
+                    email: email,
+                    nonce: akAdminData.nonce
+                },
+                success: function(response) {
+                    resultSpan.removeClass('loading');
+                    
+                    if (response.success) {
+                        resultSpan.addClass('success').text(response.data.message);
+                    } else {
+                        resultSpan.addClass('error').text(response.data.message || 'Error');
+                    }
+                },
+                error: function() {
+                    resultSpan.removeClass('loading').addClass('error').text('Request failed');
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+        
+        // Test debt chase
+        $('#ak-test-debt-chase').on('click', function() {
+            var btn = $(this);
+            var resultSpan = $('#ak-debt-chase-result');
+            
+            btn.prop('disabled', true);
+            resultSpan.removeClass('success error').addClass('loading').text('Processing...');
+            
+            $.ajax({
+                url: akAdminData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'ak_trigger_debt_chase',
+                    nonce: akAdminData.nonce
+                },
+                success: function(response) {
+                    resultSpan.removeClass('loading');
+                    
+                    if (response.success) {
+                        var logSummary = '';
+                        if (response.data.logs && response.data.logs.length > 0) {
+                            var lastLog = response.data.logs[response.data.logs.length - 1];
+                            logSummary = ' - ' + lastLog.message;
+                        }
+                        resultSpan.addClass('success').text('Done!' + logSummary);
+                    } else {
+                        resultSpan.addClass('error').text(response.data.message || 'Error');
+                    }
+                },
+                error: function() {
+                    resultSpan.removeClass('loading').addClass('error').text('Request failed');
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+        
     });
     
 })(jQuery);

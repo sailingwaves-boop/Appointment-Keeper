@@ -56,6 +56,15 @@ require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-team-admin.php';
 // Include Auto-reminders
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-auto-reminders.php';
 
+// Include Booking confirmations
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-booking-confirmations.php';
+
+// Include No-show tracker
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-noshow-tracker.php';
+
+// Include Debt auto-chase
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-debt-autochase.php';
+
 class AK_Customer_Dashboard {
     
     private static $instance = null;

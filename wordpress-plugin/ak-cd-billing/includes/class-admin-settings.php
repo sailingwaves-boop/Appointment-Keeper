@@ -92,6 +92,8 @@ class AK_Dashboard_Admin_Settings {
                 <button class="ak-tab-btn" data-tab="twilio">Twilio</button>
                 <button class="ak-tab-btn" data-tab="elevenlabs">ElevenLabs</button>
                 <button class="ak-tab-btn" data-tab="reminders">Auto-Reminders</button>
+                <button class="ak-tab-btn" data-tab="noshow">No-Shows</button>
+                <button class="ak-tab-btn" data-tab="debtchase">Debt Chase</button>
                 <button class="ak-tab-btn" data-tab="notifications">Notifications</button>
                 <button class="ak-tab-btn" data-tab="referrals">Referrals</button>
                 <button class="ak-tab-btn" data-tab="legal">Legal Pages</button>
@@ -366,6 +368,280 @@ class AK_Dashboard_Admin_Settings {
                                     </button>
                                     <span id="ak-reminder-result" class="ak-test-result"></span>
                                     <p class="description">Manually trigger the reminder process (normally runs hourly)</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Booking Confirmations Section -->
+                    <div class="ak-settings-section" style="margin-top:30px;">
+                        <h2>Booking Confirmations</h2>
+                        <p class="description">Send instant confirmation when someone books an appointment via Amelia.</p>
+                        
+                        <?php $confirm_stats = AK_Booking_Confirmations::get_stats(); ?>
+                        <div style="background:#e8f5e9;padding:12px 18px;border-radius:8px;margin-bottom:20px;display:inline-block;">
+                            <strong><?php echo $confirm_stats['today']; ?></strong> confirmations today | 
+                            <strong><?php echo $confirm_stats['total']; ?></strong> total
+                        </div>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Enable Confirmations</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_booking_confirm_enabled" value="yes"
+                                               <?php checked(get_option('ak_booking_confirm_enabled', 'yes'), 'yes'); ?>>
+                                        Send confirmations when appointments are booked
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Confirmation Methods</th>
+                                <td>
+                                    <label style="display:block;margin-bottom:8px;">
+                                        <input type="checkbox" name="ak_booking_confirm_email" value="yes"
+                                               <?php checked(get_option('ak_booking_confirm_email', 'yes'), 'yes'); ?>>
+                                        📧 Email
+                                    </label>
+                                    <label style="display:block;margin-bottom:8px;">
+                                        <input type="checkbox" name="ak_booking_confirm_sms" value="yes"
+                                               <?php checked(get_option('ak_booking_confirm_sms', 'no'), 'yes'); ?>>
+                                        📱 SMS (uses 1 credit)
+                                    </label>
+                                    <label style="display:block;">
+                                        <input type="checkbox" name="ak_booking_confirm_call" value="yes"
+                                               <?php checked(get_option('ak_booking_confirm_call', 'no'), 'yes'); ?>>
+                                        📞 AI Voice Call (uses 1 call credit)
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Use AI Voice for Calls</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_booking_confirm_use_ai_voice" value="yes"
+                                               <?php checked(get_option('ak_booking_confirm_use_ai_voice', 'yes'), 'yes'); ?>>
+                                        Use ElevenLabs AI voice (unchecked = Twilio robot voice)
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Email Subject</th>
+                                <td>
+                                    <input type="text" name="ak_booking_confirm_email_subject" class="regular-text"
+                                           value="<?php echo esc_attr(get_option('ak_booking_confirm_email_subject', 'Booking Confirmed - {service_name}')); ?>">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">SMS Message</th>
+                                <td>
+                                    <textarea name="ak_booking_confirm_sms_template" rows="3" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_booking_confirm_sms_template', 
+                                            "Hi {customer_name}! Your {service_name} booking is confirmed for {date} at {time}. Location: {location}. See you then! - {business_name}"
+                                        )); 
+                                    ?></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Call Script</th>
+                                <td>
+                                    <textarea name="ak_booking_confirm_call_template" rows="3" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_booking_confirm_call_template', 
+                                            "Hello {customer_name}! This is a confirmation call from {business_name}. Your {service_name} appointment has been booked for {date} at {time}. We look forward to seeing you. Thank you for booking with us!"
+                                        )); 
+                                    ?></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Test Confirmation</th>
+                                <td>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                                        <input type="tel" id="ak-test-confirm-phone" placeholder="Phone for SMS/Call test" style="width:200px;">
+                                        <input type="email" id="ak-test-confirm-email" placeholder="Email (optional)" style="width:200px;">
+                                    </div>
+                                    <button type="button" class="button button-secondary" id="ak-test-confirmation">
+                                        Send Test Confirmation
+                                    </button>
+                                    <span id="ak-confirm-result" class="ak-test-result"></span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- No-Show Tracking Tab -->
+                <div class="ak-tab-content" id="ak-tab-noshow">
+                    <div class="ak-settings-section">
+                        <h2>No-Show Tracking</h2>
+                        <p class="description">Track customers who miss appointments and flag repeat offenders.</p>
+                        
+                        <?php $noshow_stats = AK_NoShow_Tracker::get_stats(); ?>
+                        <div style="background:#f8d7da;padding:12px 18px;border-radius:8px;margin-bottom:20px;display:inline-block;border:1px solid #f5c6cb;">
+                            <strong><?php echo $noshow_stats['total_noshows']; ?></strong> total no-shows | 
+                            <strong><?php echo $noshow_stats['flagged_customers']; ?></strong> flagged customers
+                        </div>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Enable Tracking</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_noshow_tracking_enabled" value="yes"
+                                               <?php checked(get_option('ak_noshow_tracking_enabled', 'yes'), 'yes'); ?>>
+                                        Track no-shows and flag repeat offenders
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Auto-Mark as No-Show</th>
+                                <td>
+                                    <input type="number" name="ak_noshow_auto_mark_hours" 
+                                           value="<?php echo esc_attr(get_option('ak_noshow_auto_mark_hours', 2)); ?>" 
+                                           class="small-text" min="1" max="24">
+                                    <span>hours after appointment time</span>
+                                    <p class="description">Automatically mark appointments as no-show if not checked in</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Flag Threshold</th>
+                                <td>
+                                    <input type="number" name="ak_noshow_flag_threshold" 
+                                           value="<?php echo esc_attr(get_option('ak_noshow_flag_threshold', 3)); ?>" 
+                                           class="small-text" min="1" max="10">
+                                    <span>no-shows before flagging customer</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Send Warning SMS</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_noshow_send_warning" value="yes"
+                                               <?php checked(get_option('ak_noshow_send_warning', 'yes'), 'yes'); ?>>
+                                        Send SMS when customer is marked as no-show
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Warning Message</th>
+                                <td>
+                                    <textarea name="ak_noshow_warning_template" rows="3" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_noshow_warning_template', 
+                                            "Hi {customer_name}, We noticed you missed your {service_name} appointment on {date}. Please let us know if you need to reschedule. Repeated no-shows may result in booking restrictions. - {business_name}"
+                                        )); 
+                                    ?></textarea>
+                                    <p class="description">Variables: {customer_name}, {service_name}, {date}, {business_name}</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Debt Auto-Chase Tab -->
+                <div class="ak-tab-content" id="ak-tab-debtchase">
+                    <div class="ak-settings-section">
+                        <h2>Debt Auto-Chase</h2>
+                        <p class="description">Automatically send payment reminders to debtors at set intervals.</p>
+                        
+                        <?php $debt_stats = AK_Debt_AutoChase::get_stats(); ?>
+                        <div style="background:#fff3cd;padding:12px 18px;border-radius:8px;margin-bottom:20px;display:inline-block;border:1px solid #ffc107;">
+                            <strong><?php echo $debt_stats['total_reminders_sent']; ?></strong> reminders sent | 
+                            <strong><?php echo $debt_stats['debts_chased']; ?></strong> debts chased
+                        </div>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Enable Auto-Chase</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_debt_chase_enabled" value="yes"
+                                               <?php checked(get_option('ak_debt_chase_enabled', 'yes'), 'yes'); ?>>
+                                        Automatically send payment reminders
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Chase Method</th>
+                                <td>
+                                    <select name="ak_debt_chase_method">
+                                        <option value="sms" <?php selected(get_option('ak_debt_chase_method', 'sms'), 'sms'); ?>>SMS only</option>
+                                        <option value="email" <?php selected(get_option('ak_debt_chase_method'), 'email'); ?>>Email only</option>
+                                        <option value="both" <?php selected(get_option('ak_debt_chase_method'), 'both'); ?>>Both SMS & Email</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Chase Schedule</th>
+                                <td>
+                                    <div style="display:flex;gap:15px;flex-wrap:wrap;">
+                                        <label>
+                                            1st reminder after 
+                                            <input type="number" name="ak_debt_chase_day_1" 
+                                                   value="<?php echo esc_attr(get_option('ak_debt_chase_day_1', 7)); ?>" 
+                                                   class="small-text" min="1"> days
+                                        </label>
+                                        <label>
+                                            2nd after 
+                                            <input type="number" name="ak_debt_chase_day_2" 
+                                                   value="<?php echo esc_attr(get_option('ak_debt_chase_day_2', 14)); ?>" 
+                                                   class="small-text" min="1"> days
+                                        </label>
+                                        <label>
+                                            3rd after 
+                                            <input type="number" name="ak_debt_chase_day_3" 
+                                                   value="<?php echo esc_attr(get_option('ak_debt_chase_day_3', 30)); ?>" 
+                                                   class="small-text" min="1"> days
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Max Reminders</th>
+                                <td>
+                                    <input type="number" name="ak_debt_chase_max_reminders" 
+                                           value="<?php echo esc_attr(get_option('ak_debt_chase_max_reminders', 3)); ?>" 
+                                           class="small-text" min="1" max="10">
+                                    <span>per debt</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">1st Reminder (Friendly)</th>
+                                <td>
+                                    <textarea name="ak_debt_chase_msg_1" rows="2" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_debt_chase_msg_1', 
+                                            "Hi {debtor_name}, friendly reminder: You have an outstanding balance of £{amount} with {creditor_name}. Please arrange payment at your earliest convenience. Reply PAID if already settled."
+                                        )); 
+                                    ?></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">2nd Reminder (Follow-up)</th>
+                                <td>
+                                    <textarea name="ak_debt_chase_msg_2" rows="2" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_debt_chase_msg_2', 
+                                            "Hi {debtor_name}, this is a follow-up regarding your outstanding balance of £{amount} with {creditor_name}. Please contact us to discuss payment options."
+                                        )); 
+                                    ?></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">3rd Reminder (Final)</th>
+                                <td>
+                                    <textarea name="ak_debt_chase_msg_3" rows="2" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_debt_chase_msg_3', 
+                                            "FINAL REMINDER: {debtor_name}, you have an overdue balance of £{amount} with {creditor_name}. Immediate action required to avoid further steps. Please pay or contact us today."
+                                        )); 
+                                    ?></textarea>
+                                    <p class="description">Variables: {debtor_name}, {amount}, {creditor_name}, {original_amount}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Test Debt Chase</th>
+                                <td>
+                                    <button type="button" class="button button-secondary" id="ak-test-debt-chase">
+                                        Run Debt Chase Now
+                                    </button>
+                                    <span id="ak-debt-chase-result" class="ak-test-result"></span>
+                                    <p class="description">Manually trigger the debt chase process (normally runs daily)</p>
                                 </td>
                             </tr>
                         </table>
