@@ -1,5 +1,11 @@
 /* AI Outreach Styles */
 
+/* Hide WordPress default page title */
+.page-template-default .entry-title,
+body.page .hentry .entry-title {
+    display: none !important;
+}
+
 .ak-outreach-container {
     max-width: 800px;
     margin: 0 auto;

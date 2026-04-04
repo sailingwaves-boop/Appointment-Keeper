@@ -1,8 +1,15 @@
 /* AppointmentKeeper Customer Dashboard Styles */
 
+/* Hide WordPress default page title */
+.page-template-default .entry-title,
+body.page .hentry .entry-title {
+    display: none !important;
+}
+
 .ak-dashboard {
     max-width: 1200px;
     margin: 0 auto;
+    padding-top: 10px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -20,14 +27,44 @@
     gap: 20px;
 }
 
+.ak-dashboard-header h1,
+.ak-dashboard-header h2,
+.ak-dashboard-header h3,
+.ak-dashboard-header p,
+.ak-dashboard-header span,
+.ak-welcome h1,
+.ak-welcome p,
+.ak-dashboard-title {
+    color: white !important;
+}
+
 .ak-welcome h1 {
     margin: 0 0 5px 0;
     font-size: 28px;
+    color: white !important;
 }
 
 .ak-welcome p {
     margin: 0;
     opacity: 0.9;
+    color: white !important;
+}
+
+.ak-dashboard-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+    margin: 0 0 10px 0;
+}
+
+/* Hide Amelia branding */
+.amelia-app-booking .am-footer,
+.amelia-booking-wrap .am-footer,
+[class*="amelia"] .am-footer,
+.am-powered-by,
+.amelia-service-booking .am-footer {
+    display: none !important;
 }
 
 .ak-credits-summary {
@@ -56,6 +93,18 @@
 .ak-credit-label {
     font-size: 12px;
     opacity: 0.8;
+}
+
+/* Quick Actions - Top of Page */
+.ak-quick-actions-top {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 12px;
 }
 
 /* Navigation Tabs */
@@ -186,6 +235,16 @@
 .ak-top-up:hover {
     background: #e0a800;
     color: #333;
+}
+
+.ak-admin-link {
+    background: #6c757d;
+    color: white;
+}
+
+.ak-admin-link:hover {
+    background: #5a6268;
+    color: white;
 }
 
 /* Login Prompt */

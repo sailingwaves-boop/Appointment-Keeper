@@ -211,11 +211,12 @@ class AK_Profile_Form {
                         
                         <div class="ak-form-row">
                             <div class="ak-form-group">
-                                <label for="ak_contact_method">Preferred Contact Method</label>
+                                <label for="ak_contact_method">Preferred Contact Method <span class="ak-select-hint">Select an option</span></label>
                                 <select id="ak_contact_method" name="contact_method" class="ak-select">
-                                    <option value="email">Email</option>
+                                    <option value="" disabled selected>Select an option</option>
                                     <option value="sms">SMS</option>
                                     <option value="phone">Phone Call</option>
+                                    <option value="email">Email</option>
                                 </select>
                             </div>
                             <div class="ak-form-group">

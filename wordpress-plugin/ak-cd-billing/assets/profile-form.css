@@ -3,12 +3,21 @@
  * Colors: Blues, Greens, Orange accents
  */
 
+/* Hide WordPress default page title when our plugin takes over */
+.page-template-default .entry-title,
+.page .entry-header,
+body.page .hentry .entry-title,
+.ak-hide-title .entry-title {
+    display: none !important;
+}
+
 /* Page Container */
 .ak-profile-page {
     min-height: 100vh;
     background: linear-gradient(135deg, #e8f4f8 0%, #f0f7f4 50%, #fff8f0 100%);
-    padding: 40px 20px;
+    padding: 20px 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    margin-top: -20px;
 }
 
 .ak-profile-container {
@@ -223,6 +232,13 @@
 
 .ak-form-group label .optional {
     color: #999;
+    font-weight: 400;
+    font-size: 12px;
+}
+
+.ak-select-hint {
+    float: right;
+    color: #888;
     font-weight: 400;
     font-size: 12px;
 }

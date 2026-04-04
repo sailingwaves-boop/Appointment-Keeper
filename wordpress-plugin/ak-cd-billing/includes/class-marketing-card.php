@@ -32,17 +32,28 @@ class AK_Marketing_Card {
      * Create the marketing page
      */
     public function create_marketing_page() {
+        // Skip if already created
+        if (get_option('ak_marketing_page_created') === 'yes') {
+            return;
+        }
+        
         $page_slug = 'get-started';
         $existing_page = get_page_by_path($page_slug);
         
         if (!$existing_page) {
-            wp_insert_post(array(
+            $page_id = wp_insert_post(array(
                 'post_title' => 'Get Started with AppointmentKeeper',
                 'post_name' => $page_slug,
                 'post_content' => '[ak_marketing_card]',
                 'post_status' => 'publish',
                 'post_type' => 'page',
             ));
+            
+            if ($page_id && !is_wp_error($page_id)) {
+                update_option('ak_marketing_page_created', 'yes');
+            }
+        } else {
+            update_option('ak_marketing_page_created', 'yes');
         }
     }
     

@@ -175,9 +175,10 @@ class AK_Customer_Dashboard {
         ob_start();
         ?>
         <div class="ak-dashboard">
-            <!-- Header -->
+            <!-- Header with Title & Quick Actions -->
             <div class="ak-dashboard-header">
                 <div class="ak-welcome">
+                    <h2 class="ak-dashboard-title">My Dashboard</h2>
                     <h1>Welcome back, <?php echo esc_html($user->display_name); ?>!</h1>
                     <p>Manage your appointments, credits, and more from one place.</p>
                 </div>
@@ -199,6 +200,24 @@ class AK_Customer_Dashboard {
                         <span class="ak-credit-label">Emails</span>
                     </div>
                 </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Quick Actions - At Top -->
+            <div class="ak-quick-actions-top">
+                <a href="#" class="ak-action-btn ak-book-appointment" onclick="document.querySelector('[data-tab=appointments]').click(); return false;">
+                    📅 Book Appointment
+                </a>
+                <a href="#" class="ak-action-btn ak-add-debt" onclick="document.querySelector('[data-tab=ledger]').click(); return false;">
+                    ➕ Add Debt
+                </a>
+                <a href="<?php echo esc_url(home_url('/credits-store')); ?>" class="ak-action-btn ak-top-up">
+                    💳 Top Up Credits
+                </a>
+                <?php if (current_user_can('manage_options')): ?>
+                <a href="<?php echo esc_url(admin_url('options-general.php?page=ak-dashboard-settings')); ?>" class="ak-action-btn ak-admin-link">
+                    ⚙️ Admin Settings
+                </a>
                 <?php endif; ?>
             </div>
             
@@ -291,21 +310,6 @@ class AK_Customer_Dashboard {
                     </div>
                 </div>
                 
-            </div>
-            
-            <!-- Quick Actions Footer -->
-            <div class="ak-dashboard-footer">
-                <div class="ak-quick-actions">
-                    <a href="#" class="ak-action-btn ak-book-appointment" onclick="document.querySelector('[data-tab=appointments]').click(); return false;">
-                        📅 Book Appointment
-                    </a>
-                    <a href="#" class="ak-action-btn ak-add-debt" onclick="document.querySelector('[data-tab=ledger]').click(); return false;">
-                        ➕ Add Debt
-                    </a>
-                    <a href="<?php echo esc_url(home_url('/pricing')); ?>" class="ak-action-btn ak-top-up">
-                        💳 Top Up Credits
-                    </a>
-                </div>
             </div>
         </div>
         <?php

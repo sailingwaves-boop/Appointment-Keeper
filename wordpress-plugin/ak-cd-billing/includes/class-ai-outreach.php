@@ -87,17 +87,29 @@ class AK_AI_Outreach {
      * Create the outreach page
      */
     public function create_outreach_page() {
+        // Skip if already created this session
+        if (get_option('ak_outreach_page_created') === 'yes') {
+            return;
+        }
+        
         $page_slug = 'ai-outreach';
         $existing_page = get_page_by_path($page_slug);
         
         if (!$existing_page) {
-            wp_insert_post(array(
+            $page_id = wp_insert_post(array(
                 'post_title' => 'Invite Friends',
                 'post_name' => $page_slug,
                 'post_content' => '[ak_ai_outreach]',
                 'post_status' => 'publish',
                 'post_type' => 'page',
             ));
+            
+            if ($page_id && !is_wp_error($page_id)) {
+                update_option('ak_outreach_page_created', 'yes');
+            }
+        } else {
+            update_option('ak_outreach_page_created', 'yes');
+        }
         }
     }
     

@@ -178,13 +178,20 @@ class AK_Signup_Handler {
         </div>
         
         <style>
+            /* Hide WordPress page title */
+            .page-template-default .entry-title,
+            body.page .hentry .entry-title {
+                display: none !important;
+            }
+            
             .ak-verification-page {
                 min-height: 70vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 40px 20px;
+                padding: 20px 20px;
                 background: linear-gradient(135deg, #e8f4f8 0%, #f0f7f4 100%);
+                margin-top: -20px;
             }
             
             .ak-verification-container {

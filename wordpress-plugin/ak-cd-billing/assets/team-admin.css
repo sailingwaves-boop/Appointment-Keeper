@@ -2,10 +2,16 @@
  * Team Admin Styles
  */
 
+/* Hide WordPress default page title */
+.page-template-default .entry-title,
+body.page .hentry .entry-title {
+    display: none !important;
+}
+
 .ak-team-page {
     max-width: 800px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 20px 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
