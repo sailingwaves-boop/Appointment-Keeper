@@ -53,6 +53,9 @@ require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-helper-widget.php';
 // Include Team admin
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-team-admin.php';
 
+// Include Auto-reminders
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-auto-reminders.php';
+
 class AK_Customer_Dashboard {
     
     private static $instance = null;

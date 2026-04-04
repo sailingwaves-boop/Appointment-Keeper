@@ -81,6 +81,44 @@
             });
         });
         
+        // Test reminders
+        $('#ak-test-reminders').on('click', function() {
+            var btn = $(this);
+            var resultSpan = $('#ak-reminder-result');
+            
+            btn.prop('disabled', true);
+            resultSpan.removeClass('success error').addClass('loading').text('Processing...');
+            
+            $.ajax({
+                url: akAdminData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'ak_trigger_reminders',
+                    nonce: akAdminData.nonce
+                },
+                success: function(response) {
+                    resultSpan.removeClass('loading');
+                    
+                    if (response.success) {
+                        var logSummary = '';
+                        if (response.data.logs && response.data.logs.length > 0) {
+                            var lastLog = response.data.logs[response.data.logs.length - 1];
+                            logSummary = ' - ' + lastLog.message;
+                        }
+                        resultSpan.addClass('success').text('Done!' + logSummary);
+                    } else {
+                        resultSpan.addClass('error').text(response.data.message || 'Error');
+                    }
+                },
+                error: function() {
+                    resultSpan.removeClass('loading').addClass('error').text('Request failed');
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+        
     });
     
 })(jQuery);

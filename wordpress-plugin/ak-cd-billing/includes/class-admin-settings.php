@@ -91,6 +91,7 @@ class AK_Dashboard_Admin_Settings {
                 <button class="ak-tab-btn active" data-tab="stripe">Stripe</button>
                 <button class="ak-tab-btn" data-tab="twilio">Twilio</button>
                 <button class="ak-tab-btn" data-tab="elevenlabs">ElevenLabs</button>
+                <button class="ak-tab-btn" data-tab="reminders">Auto-Reminders</button>
                 <button class="ak-tab-btn" data-tab="notifications">Notifications</button>
                 <button class="ak-tab-btn" data-tab="referrals">Referrals</button>
                 <button class="ak-tab-btn" data-tab="legal">Legal Pages</button>
@@ -265,6 +266,106 @@ class AK_Dashboard_Admin_Settings {
                                         Allow customers to enable auto top-up
                                     </label>
                                     <p class="description">Customers can opt-in to automatically purchase more credits</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Auto-Reminders Tab -->
+                <div class="ak-tab-content" id="ak-tab-reminders">
+                    <div class="ak-settings-section">
+                        <h2>Automatic Appointment Reminders</h2>
+                        <p class="description">Send SMS reminders automatically before Amelia appointments. Requires Twilio to be configured.</p>
+                        
+                        <?php 
+                        $stats = AK_Auto_Reminders::get_stats();
+                        ?>
+                        <div class="ak-reminder-stats" style="background:#f8fafb;padding:15px 20px;border-radius:10px;margin-bottom:20px;display:flex;gap:30px;">
+                            <div><strong><?php echo $stats['today']; ?></strong> sent today</div>
+                            <div><strong><?php echo $stats['this_week']; ?></strong> this week</div>
+                            <div><strong><?php echo $stats['total']; ?></strong> total</div>
+                        </div>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Enable Auto-Reminders</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_auto_reminders_enabled" value="yes"
+                                               <?php checked(get_option('ak_auto_reminders_enabled', 'yes'), 'yes'); ?>>
+                                        Automatically send SMS reminders before appointments
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Business Name</th>
+                                <td>
+                                    <input type="text" name="ak_business_name" 
+                                           value="<?php echo esc_attr(get_option('ak_business_name', get_bloginfo('name'))); ?>" 
+                                           class="regular-text">
+                                    <p class="description">Used in reminder messages</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Reminder Times</th>
+                                <td>
+                                    <label style="display:block;margin-bottom:8px;">
+                                        <input type="checkbox" name="ak_reminder_24h_enabled" value="yes"
+                                               <?php checked(get_option('ak_reminder_24h_enabled', 'yes'), 'yes'); ?>>
+                                        24 hours before
+                                    </label>
+                                    <label style="display:block;margin-bottom:8px;">
+                                        <input type="checkbox" name="ak_reminder_2h_enabled" value="yes"
+                                               <?php checked(get_option('ak_reminder_2h_enabled', 'yes'), 'yes'); ?>>
+                                        2 hours before
+                                    </label>
+                                    <label style="display:block;">
+                                        <input type="checkbox" name="ak_reminder_1h_enabled" value="yes"
+                                               <?php checked(get_option('ak_reminder_1h_enabled', 'no'), 'yes'); ?>>
+                                        1 hour before
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Include GPS Directions</th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="ak_reminder_include_gps" value="yes"
+                                               <?php checked(get_option('ak_reminder_include_gps', 'yes'), 'yes'); ?>>
+                                        Add Google Maps link to reminder messages
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">24-Hour Message</th>
+                                <td>
+                                    <textarea name="ak_reminder_sms_24h" rows="3" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_reminder_sms_24h', 
+                                            "Hi {customer_name}! Reminder: You have {service_name} tomorrow at {time}. Location: {location}. See you soon! - {business_name}"
+                                        )); 
+                                    ?></textarea>
+                                    <p class="description">Variables: {customer_name}, {service_name}, {time}, {date}, {location}, {business_name}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">2-Hour Message</th>
+                                <td>
+                                    <textarea name="ak_reminder_sms_2h" rows="3" class="large-text"><?php 
+                                        echo esc_textarea(get_option('ak_reminder_sms_2h', 
+                                            "Hi {customer_name}! Your {service_name} appointment is in 2 hours at {time}. {location}. See you shortly!"
+                                        )); 
+                                    ?></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Test Reminders</th>
+                                <td>
+                                    <button type="button" class="button button-secondary" id="ak-test-reminders">
+                                        Run Reminder Check Now
+                                    </button>
+                                    <span id="ak-reminder-result" class="ak-test-result"></span>
+                                    <p class="description">Manually trigger the reminder process (normally runs hourly)</p>
                                 </td>
                             </tr>
                         </table>

@@ -109,7 +109,21 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
   - Email invitations with accept link
   - Pending/Active status tracking
 
-### 6. Previous Features (v2.0)
+### 6. Auto-Reminders (Amelia Integration) ⏰
+- **File:** `class-auto-reminders.php`
+- **Features:**
+  - Automatic SMS reminders before Amelia appointments
+  - Configurable timing: 24 hours, 2 hours, 1 hour before
+  - Customizable message templates with variables:
+    - {customer_name}, {service_name}, {time}, {date}, {location}, {business_name}
+  - Optional GPS directions link (Google Maps)
+  - Runs hourly via WordPress cron
+  - Manual trigger button for testing
+  - Statistics dashboard (today, this week, total)
+  - Duplicate prevention (won't send same reminder twice)
+  - Automatic URL shortening for GPS links
+
+### 7. Previous Features (v2.0)
 - Profile Completion Form (Terms, GDPR, Business Name)
 - Email Verification Success Page
 - Admin Settings (Stripe, Twilio, ElevenLabs with test buttons)
