@@ -239,13 +239,9 @@ ak_last_low_credit_notification
 
 ---
 
-## API Keys Reference (User Provided)
-- Twilio SID: `AC58b779cf24f0535f0c8753c0ba5258c9`
-- Twilio Auth: `8baafb482a5312a97a1d522c5a13d0d8`
-- Twilio Phone: `+447488894735`
-- ElevenLabs: `inb648671332a93d6f7df56bb93bd1e17bae9ab53eaaee55365dec3a1c59daa5d6fo`
-
-*These should be entered in WP Admin → Settings → AppointmentKeeper*
+## API Keys Reference
+API keys are stored securely in WordPress Admin → Settings → AppointmentKeeper
+(Keys removed from this document for security)
 
 ---
 
