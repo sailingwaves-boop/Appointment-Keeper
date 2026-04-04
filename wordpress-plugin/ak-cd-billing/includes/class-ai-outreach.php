@@ -110,7 +110,6 @@ class AK_AI_Outreach {
         } else {
             update_option('ak_outreach_page_created', 'yes');
         }
-        }
     }
     
     /**
