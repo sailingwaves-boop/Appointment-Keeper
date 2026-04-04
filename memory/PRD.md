@@ -11,7 +11,8 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
 ## User Personas
 1. **Site Admin/Staff** - Uses Credit Manager to manage customer credits and subscriptions
 2. **Customers** - Use the Dashboard to see appointments, track debts, view credits, refer friends
-3. **Debtors** - People who owe money to customers, receive reminders via SMS/Email
+3. **Team Members** - Staff who use allocated credits from their team owner
+4. **Debtors** - People who owe money to customers, receive reminders via SMS/Email
 
 ## Core Requirements
 - Amelia integration for customer/appointment data
@@ -19,7 +20,7 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
 - Debt ledger with payment tracking and reminders
 - Twilio integration for SMS & Voice calls
 - ElevenLabs integration for AI voice
-- Stripe integration for subscriptions
+- Stripe integration for subscriptions & credit purchases
 - Referral system with rewards
 - Four subscription tiers: Basic (£9.99), Standard (£24.99), Premium (£49.99), Enterprise (£149.99)
 
@@ -29,101 +30,92 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
 
 ### 1. AK Debt Ledger (v2.0) - DONE
 **File:** `/app/ak-debt-ledger.zip`
-**Purpose:** Customer-facing debt tracking with credit-based reminders
-
-**Features:**
-- Debt CRUD operations (add, edit, delete, mark paid, write off)
-- Payment recording with confirmation workflow
-- Twilio SMS reminders (deducts credits)
-- SendGrid email reminders (deducts credits)
-- Amelia customer integration
-- Referral system with free month rewards
-- Customizable message templates
-- Automated cron reminders
 
 ### 2. AK Credit Manager (v1.1) - DONE
 **File:** `/app/ak-credit-manager.zip`
-**Purpose:** Staff tool to manage customer credit balances
 
-**Features:**
-- View all customers with credit balances
-- Add/remove credits manually
-- Four subscription tiers with configurable limits
-- Dual access: WordPress admin menu + Amelia admin widget
-- Transaction logging
-- Refund/free month handling
-- REST API endpoint for Zapier: `/wp-json/ak-credit/v1/deduct`
+### 3. AK Customer Dashboard & Billing (v3.0) - COMPLETE ✅
+**File:** `/app/ak-cd-billing-v3-complete.zip`
 
-### 3. AK Customer Dashboard & Billing (v2.0) - DONE ✅
-**File:** `/app/ak-cd-billing-v2.zip`
-**Purpose:** Unified customer dashboard + complete signup/billing flow
+---
 
-**Features Implemented:**
+## V3.0 FEATURES (All Complete!)
 
-#### Signup & Authentication
-- Modern popup signup form with email/password
-- Google login hook (Nextend Social Login integration)
-- Email verification with HTML emails
-- **NEW:** Email verification success page with proper redirects
-- **NEW:** Resend verification with 60-second rate limiting
+### 1. Credits Store 💳
+- **Page:** `/credits-store`
+- **Pricing:**
+  - 50 SMS = £5 (10p per SMS)
+  - 100 SMS = £9 (9p per SMS) - BEST VALUE badge
+  - 200 SMS = £15 (7.5p per SMS)
+  - 10 Call Minutes = £5
+  - 25 Call Minutes = £10
+  - Starter Bundle = £12 (50 SMS + 10 Calls + 50 Emails)
+- **Features:**
+  - Current balance display
+  - One-click Stripe checkout
+  - Credits added instantly via webhook
+  - Purchase history logging
 
-#### Profile Completion Form
-- First/Last name fields
-- **NEW:** Business Name field (optional)
-- Phone number with country code dropdown
-- Preferred contact method
-- "How did you hear about us?" dropdown
-- **NEW:** Terms & Conditions checkbox (required)
-- **NEW:** GDPR Privacy Policy checkbox (required)
-- Marketing consent checkbox (optional)
-- "Invite Friends" dynamic section (1-3 friends)
-- Progress bar showing signup steps
+### 2. Twilio Integration 📱📞
+- **File:** `class-twilio-service.php`
+- **Features:**
+  - Send SMS messages (deducts 1 credit)
+  - Make voice calls with TwiML
+  - Send GPS directions (Google Maps link)
+  - Phone number formatting (E.164)
+  - Auto-refund credits on failed sends
+  - Usage logging to database
+  - Rate limiting & error handling
 
-#### Plan Selection & Billing
-- 4-tier plan cards (Basic, Standard, Premium, Enterprise)
-- 3-day free trial for all plans
-- AppointmentKeeper Helper add-on (+£12/mo)
-- Stripe Checkout integration
-- Subscription webhooks (checkout.completed, invoice.paid, subscription.deleted)
+### 3. ElevenLabs Integration 🎙️
+- **File:** `class-elevenlabs-service.php`
+- **Features:**
+  - Generate natural AI speech from text
+  - British voice (Sarah) as default
+  - Custom voice ID support
+  - Audio files stored in /wp-content/uploads/ak-audio/
+  - Auto-cleanup after 1 hour
+  - Quota checking
+  - Seamless Twilio integration for AI calls
 
-#### Admin Settings Panel (wp-admin)
-- **NEW:** Tabbed interface (Stripe, Twilio, ElevenLabs, Notifications, Referrals, Legal, Webhooks)
-- Stripe API keys with Show/Hide toggle
-- **NEW:** Twilio Account SID, Auth Token, Phone Number
-- **NEW:** ElevenLabs API Key and Voice ID
-- **NEW:** "Test Connection" buttons for all services
-- **NEW:** Low credit threshold setting
-- **NEW:** Auto top-up enable/disable
-- **NEW:** Referral reward credits setting
-- **NEW:** Terms & Privacy page selectors
-- Copy-able webhook URLs
+### 4. AppointmentKeeper Helper Widget 🤖
+- **File:** `class-helper-widget.php`
+- **Access:** £12/mo add-on OR included with Enterprise
+- **Features:**
+  - Floating chat-style widget (bottom-right)
+  - Quick action buttons:
+    - View Appointments (pulls from Amelia)
+    - Send SMS Reminder
+    - Send GPS Directions
+    - Make AI Voice Call
+    - Book Appointment
+  - Natural language command support
+  - Upgrade prompt for non-subscribers
+  - Mobile responsive
 
-#### Referral System
-- **NEW:** Unique referral codes per user
-- **NEW:** Referral link tracking (cookie-based, 30 days)
-- **NEW:** Click analytics
-- **NEW:** Reward credits when referred user subscribes
-- **NEW:** Referral dashboard widget with stats
-- **NEW:** Social share buttons (WhatsApp, Twitter, Email)
-- **NEW:** Email notifications on successful referrals
+### 5. Team Admin Panel 👥
+- **File:** `class-team-admin.php`
+- **Page:** `/team`
+- **Limits:**
+  - Basic/Standard: No team access
+  - Premium: Up to 3 members
+  - Enterprise: Unlimited members
+- **Features:**
+  - Invite team members via email
+  - Allocate SMS/Call credits (deducted from owner's pool)
+  - Remove members (credits returned to owner)
+  - Adjust allocations in real-time
+  - Member view shows their allocated credits
+  - Email invitations with accept link
+  - Pending/Active status tracking
 
-#### Credit Notifications
-- **NEW:** Low credit warning emails (configurable threshold)
-- **NEW:** Daily cron check for low balances
-- **NEW:** Auto top-up option via Stripe
-- **NEW:** 24-hour notification cooldown to prevent spam
-
-#### Webhook Logging
-- **NEW:** Stores last 50 webhook events
-- **NEW:** Admin page to view/clear logs
-- **NEW:** Payload viewer modal
-- **NEW:** Status tracking (received, processed, error, ignored)
-
-#### Dashboard
-- Welcome header with credit balance display
-- Tabbed interface: Appointments, Debt Ledger, Usage History, Refer Friends
-- Quick action buttons
-- Mobile responsive design
+### 6. Previous Features (v2.0)
+- Profile Completion Form (Terms, GDPR, Business Name)
+- Email Verification Success Page
+- Admin Settings (Stripe, Twilio, ElevenLabs with test buttons)
+- Referral System with tracking & rewards
+- Low Credit Notifications & Auto Top-up
+- Webhook Logging (last 50 events)
 
 ---
 
@@ -135,124 +127,127 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
   - Twilio (SMS, Voice)
   - ElevenLabs (AI Voice)
   - Stripe (Payments, Subscriptions)
-  - SendGrid (Email) - via Debt Ledger
-- **Hooks:** WordPress actions/filters, AJAX via admin-ajax.php, REST API
+  - is.gd (URL shortening for GPS links)
 
-## Database Schema
+## Database Tables
 ```
-wp_ak_customer_credits
-- user_id (int)
-- sms_credits (int)
-- call_credits (int)
-- email_credits (int)
-- plan_type (varchar)
-
-wp_ak_credit_transactions
-- id, user_id, transaction_type, amount, channel, reason, timestamp
-
-wp_ak_debt_ledger
-- id, creditor_user_id, debtor_details, amount, balance, status, created_at
-
-wp_ak_debt_payments
-- id, ledger_id, amount, payment_date, note
-
-wp_ak_usage_log
-- id, user_id, usage_type, recipient_phone, recipient_email, status, created_at
-
-wp_ak_webhook_log (NEW)
-- id, event_type, event_id, payload, status, error_message, created_at
+wp_ak_customer_credits - User credit balances
+wp_ak_credit_transactions - Transaction history
+wp_ak_debt_ledger - Debt records
+wp_ak_debt_payments - Payment records
+wp_ak_usage_log - SMS/Call/Email usage logs
+wp_ak_webhook_log - Stripe webhook events
 ```
 
-## User Meta Keys (NEW)
+## User Meta Keys
 ```
-ak_email_verified, ak_email_verified_date
-ak_verification_token, ak_verification_expires
-ak_profile_complete, ak_profile_completed_date
-ak_business_name, ak_phone, ak_country_code, ak_contact_method
-ak_consent_terms, ak_consent_terms_date
-ak_consent_privacy, ak_consent_privacy_date
-ak_consent_reminders, ak_consent_marketing
+// Subscription
 ak_subscription_status, ak_subscription_plan
 ak_stripe_customer_id, ak_stripe_subscription_id
 ak_has_helper
-ak_referral_code, ak_referral_count, ak_referral_click_count
+
+// Profile
+ak_email_verified, ak_profile_complete
+ak_business_name, ak_phone, ak_country_code
+ak_consent_terms, ak_consent_privacy
+
+// Referrals
+ak_referral_code, ak_referral_count
 ak_referrals (array), ak_referred_by
+
+// Team
+ak_team_members (array - for owners)
+ak_team_owner_id (for members)
+
+// Notifications
 ak_auto_topup_enabled, ak_auto_topup_amount
 ak_last_low_credit_notification
 ```
 
 ---
 
+## Pages Created by Plugin
+| Page | URL | Purpose |
+|------|-----|---------|
+| My Dashboard | /my-dashboard | Main customer dashboard |
+| Choose Plan | /choose-plan | Stripe subscription selection |
+| Complete Profile | /complete-profile | Profile form after verification |
+| Email Verified | /email-verified | Verification success page |
+| Credits Store | /credits-store | Buy additional credits |
+| Team Management | /team | Invite & manage team members |
+
+---
+
 ## Installation Instructions
 
-### AK Customer Dashboard & Billing (Latest)
-1. Download `ak-cd-billing-v2.zip`
-2. WordPress Admin > Plugins > Add New > Upload Plugin
+1. Download `ak-cd-billing-v3-complete.zip`
+2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Upload ZIP and activate
-4. Go to Settings > AppointmentKeeper to configure:
-   - Stripe API keys (required for billing)
-   - Twilio credentials (for SMS/calls)
-   - ElevenLabs API key (for AI voice)
-   - Set low credit threshold
-   - Select Terms & Privacy pages
-5. Plugin auto-creates pages:
-   - /my-dashboard
-   - /choose-plan
-   - /complete-profile
-   - /email-verified
+4. Go to **Settings → AppointmentKeeper** to configure:
+   - **Stripe Tab:** Add your API keys
+   - **Twilio Tab:** Add Account SID, Auth Token, Phone Number
+   - **ElevenLabs Tab:** Add API key
+   - **Legal Tab:** Select Terms & Privacy Policy pages
+5. Test connections using the "Test Connection" buttons
+6. Done! Plugin auto-creates all necessary pages.
 
-### AK Credit Manager
-1. Download `ak-credit-manager.zip`
-2. WordPress Admin > Plugins > Add New > Upload Plugin
-3. Upload ZIP and activate
-4. Access via: WordPress sidebar "Credit Manager" OR Amelia admin panel widget
+---
 
-### AK Debt Ledger
-1. Download `ak-debt-ledger.zip`
-2. WordPress Admin > Plugins > Add New > Upload Plugin
-3. Upload ZIP and activate
-4. Configure Twilio/SendGrid in settings
-5. Customers access via shortcode `[ak_debt_ledger]`
+## API Keys Reference (User Provided)
+- Twilio SID: `AC58b779cf24f0535f0c8753c0ba5258c9`
+- Twilio Auth: `8baafb482a5312a97a1d522c5a13d0d8`
+- Twilio Phone: `+447488894735`
+- ElevenLabs: `inb648671332a93d6f7df56bb93bd1e17bae9ab53eaaee55365dec3a1c59daa5d6fo`
+
+*These should be entered in WP Admin → Settings → AppointmentKeeper*
 
 ---
 
 ## Backlog / Future Tasks
 
-### P0 - In Progress
-- **Twilio & ElevenLabs Integration Logic**: Backend code to actually send SMS/make calls using stored API keys (settings UI done, logic next)
-- **AppointmentKeeper Helper Widget**: AI assistant that automates appointments, SMS, calls, GPS directions
-
-### P1 - Upcoming
-- Team Admin Panel: Dashboard for Premium (3 members) and Enterprise (unlimited) to invite team members
-- GPS Directions Feature: Send text with directions when postcode entered
-- Google Logo for OAuth: Proper styling on Nextend login button
+### P1 - Next Up
+- **Google Logo for OAuth** - Proper styling on Nextend login button
+- **Amelia Deep Integration** - Pull real appointment data, auto-send reminders
 
 ### P2 - Future
-- Main AppointmentKeeper Plugin: Single master plugin bundling all features
-- Export debts to CSV/Excel
+- Multi-language support
+- Export debts/usage to CSV/Excel
 - Bulk reminder actions
-- Payment gateway for debt collection (let debtors pay directly)
+- Payment gateway for debt collection
 
 ### P3 - Nice to Have
-- PayPal integration
-- Dashboard widget with weekly stats
-- Mobile app deep linking
+- Mobile app
+- Dashboard analytics widget
+- Custom ElevenLabs voice cloning
 
 ---
 
-## API Keys Provided (Stored Securely in WP Options)
-- Twilio SID: AC58b779cf24f0535f0c8753c0ba5258c9
-- Twilio Auth: 8baafb482a5312a97a1d522c5a13d0d8
-- Twilio Phone: +447488894735
-- ElevenLabs: inb648671332a93d6f7df56bb93bd1e17bae9ab53eaaee55365dec3a1c59daa5d6fo
+## Pricing Summary
+
+### Subscription Plans
+| Plan | Price | SMS | Calls | Emails | Team | Helper |
+|------|-------|-----|-------|--------|------|--------|
+| Basic | £9.99/mo | 50 | 20 | 100 | No | +£12 |
+| Standard | £24.99/mo | 150 | 50 | 300 | No | +£12 |
+| Premium | £49.99/mo | 500 | 150 | 1000 | 3 members | +£12 |
+| Enterprise | £149.99/mo | 2000 | 500 | 5000 | Unlimited | Included |
+
+### Credit Packs
+| Pack | Price | Per Unit | Margin |
+|------|-------|----------|--------|
+| 50 SMS | £5 | 10p | 60% |
+| 100 SMS | £9 | 9p | 55% |
+| 200 SMS | £15 | 7.5p | 47% |
+| 10 Calls | £5 | 50p | ~50% |
+| 25 Calls | £10 | 40p | ~50% |
+| Starter Bundle | £12 | - | ~50% |
 
 ---
 
 ## Last Updated
-April 2025 - Completed v2.0 with:
-- Profile form with Terms/GDPR/Business Name
-- Email verification success page
-- Admin settings for Twilio/ElevenLabs with test buttons
-- Referral tracking system with rewards
-- Low credit notifications and auto top-up
-- Webhook event logging
+April 2025 - v3.0 Complete with:
+- Credits Store (SMS/Call packs with Stripe)
+- Twilio SMS & Voice integration (fully wired)
+- ElevenLabs AI voice integration
+- AppointmentKeeper Helper Widget
+- Team Admin Panel (Premium/Enterprise)

@@ -1,0 +1,430 @@
+/**
+ * AppointmentKeeper Helper Widget Styles
+ */
+
+/* Toggle Button */
+.ak-helper-toggle {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.4);
+    z-index: 99998;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ak-helper-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(30, 58, 95, 0.5);
+}
+
+.ak-helper-toggle svg {
+    width: 28px;
+    height: 28px;
+    stroke: #fff;
+}
+
+.ak-helper-toggle.active {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+/* Panel */
+.ak-helper-panel {
+    position: fixed;
+    bottom: 100px;
+    right: 25px;
+    width: 360px;
+    max-height: 520px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.ak-helper-panel.active {
+    display: flex;
+    animation: ak-slide-up 0.3s ease;
+}
+
+@keyframes ak-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.ak-helper-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: #fff;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ak-helper-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.ak-helper-icon {
+    font-size: 20px;
+}
+
+.ak-helper-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    line-height: 1;
+}
+
+.ak-helper-close:hover {
+    opacity: 1;
+}
+
+/* Content */
+.ak-helper-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ak-helper-greeting {
+    padding: 20px;
+    background: #f8fafb;
+    font-size: 16px;
+    color: #1e3a5f;
+    line-height: 1.5;
+    border-bottom: 1px solid #e0e7ef;
+}
+
+.ak-helper-greeting small {
+    color: #888;
+    font-size: 13px;
+}
+
+/* Quick Actions */
+.ak-helper-actions {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    border-bottom: 1px solid #e0e7ef;
+}
+
+.ak-helper-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #fff;
+    border: 2px solid #e0e7ef;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    color: #333;
+}
+
+.ak-helper-action-btn:hover {
+    border-color: #2d5a87;
+    background: #f8fafb;
+}
+
+.ak-action-icon {
+    font-size: 18px;
+}
+
+/* Dynamic Content Area */
+.ak-helper-dynamic {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    max-height: 250px;
+}
+
+/* Appointments List */
+.ak-appointments-list h4 {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    color: #888;
+}
+
+.ak-apt-card {
+    background: #f8fafb;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.ak-apt-service {
+    font-weight: 600;
+    color: #1e3a5f;
+    margin-bottom: 5px;
+}
+
+.ak-apt-datetime {
+    font-size: 13px;
+    color: #28a745;
+    margin-bottom: 3px;
+}
+
+.ak-apt-location {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.ak-apt-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ak-apt-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #e0e7ef;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ak-apt-btn:hover {
+    background: #1e3a5f;
+    color: #fff;
+    border-color: #1e3a5f;
+}
+
+/* Input Area */
+.ak-helper-input-area {
+    padding: 15px;
+    border-top: 1px solid #e0e7ef;
+    display: flex;
+    gap: 10px;
+}
+
+#ak-helper-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #e0e7ef;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#ak-helper-input:focus {
+    border-color: #2d5a87;
+}
+
+.ak-helper-send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #28a745 0%, #20963c 100%);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ak-helper-send-btn:hover {
+    transform: scale(1.05);
+}
+
+.ak-helper-send-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: #fff;
+}
+
+/* Upgrade Prompt */
+.ak-helper-upgrade {
+    padding: 30px 25px;
+    text-align: center;
+}
+
+.ak-upgrade-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+}
+
+.ak-helper-upgrade h3 {
+    margin: 0 0 10px 0;
+    color: #1e3a5f;
+    font-size: 20px;
+}
+
+.ak-helper-upgrade > p {
+    margin: 0 0 20px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ak-upgrade-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 25px 0;
+    text-align: left;
+}
+
+.ak-upgrade-features li {
+    padding: 8px 0;
+    font-size: 14px;
+    color: #555;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.ak-upgrade-btn {
+    display: inline-block;
+    padding: 14px 30px;
+    background: linear-gradient(135deg, #28a745 0%, #20963c 100%);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.3s;
+}
+
+.ak-upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    color: #fff;
+}
+
+.ak-upgrade-note {
+    margin: 15px 0 0 0;
+    font-size: 12px;
+    color: #999;
+}
+
+/* Forms in dynamic area */
+.ak-helper-form {
+    padding: 5px 0;
+}
+
+.ak-helper-form-group {
+    margin-bottom: 12px;
+}
+
+.ak-helper-form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.ak-helper-form-group input,
+.ak-helper-form-group textarea,
+.ak-helper-form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e7ef;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.ak-helper-form-group input:focus,
+.ak-helper-form-group textarea:focus {
+    outline: none;
+    border-color: #2d5a87;
+}
+
+.ak-helper-form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.ak-helper-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ak-helper-submit-btn:hover {
+    background: linear-gradient(135deg, #2d5a87 0%, #3d6a97 100%);
+}
+
+.ak-helper-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Messages */
+.ak-helper-message {
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.ak-helper-message.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ak-helper-message.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Responsive */
+@media (max-width: 420px) {
+    .ak-helper-panel {
+        width: calc(100% - 20px);
+        right: 10px;
+        bottom: 80px;
+        max-height: 70vh;
+    }
+    
+    .ak-helper-toggle {
+        right: 15px;
+        bottom: 15px;
+        width: 55px;
+        height: 55px;
+    }
+    
+    .ak-helper-actions {
+        grid-template-columns: 1fr;
+    }
+}

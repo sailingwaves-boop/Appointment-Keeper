@@ -1,0 +1,294 @@
+/**
+ * Credits Store Styles
+ */
+
+.ak-store-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header */
+.ak-store-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.ak-store-header h1 {
+    margin: 0 0 10px 0;
+    font-size: 32px;
+    color: #1e3a5f;
+}
+
+.ak-store-header > p {
+    margin: 0 0 25px 0;
+    color: #666;
+    font-size: 16px;
+}
+
+/* Current Balance */
+.ak-current-balance {
+    background: linear-gradient(135deg, #f8fafb 0%, #e8f4f8 100%);
+    border-radius: 16px;
+    padding: 20px 25px;
+    display: inline-block;
+}
+
+.ak-balance-label {
+    display: block;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ak-balance-pills {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ak-pill {
+    background: #fff;
+    padding: 10px 18px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.ak-sms-pill { color: #2196f3; border: 2px solid #bbdefb; }
+.ak-call-pill { color: #4caf50; border: 2px solid #c8e6c9; }
+.ak-email-pill { color: #ff9800; border: 2px solid #ffe0b2; }
+
+/* Store Sections */
+.ak-store-section {
+    margin-bottom: 40px;
+}
+
+.ak-store-section h2 {
+    font-size: 20px;
+    color: #1e3a5f;
+    margin: 0 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8f4f8;
+}
+
+/* Packs Grid */
+.ak-packs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Pack Cards */
+.ak-pack-card {
+    background: #fff;
+    border: 2px solid #e0e7ef;
+    border-radius: 16px;
+    padding: 25px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.ak-pack-card:hover {
+    border-color: #2d5a87;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(30, 58, 95, 0.15);
+}
+
+.ak-pack-card.ak-popular {
+    border-color: #28a745;
+    background: linear-gradient(to bottom, #f0fff4 0%, #fff 100%);
+}
+
+.ak-popular-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #28a745 0%, #20963c 100%);
+    color: #fff;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.ak-pack-amount {
+    font-size: 48px;
+    font-weight: 800;
+    color: #1e3a5f;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.ak-pack-type {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 15px;
+}
+
+.ak-pack-price {
+    font-size: 28px;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 5px;
+}
+
+.ak-pack-per-credit {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 20px;
+}
+
+.ak-pack-savings {
+    font-size: 13px;
+    color: #ff9800;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+/* Combo Card */
+.ak-combo-card {
+    background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
+    border-color: #ffc107;
+}
+
+.ak-combo-contents {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 15px 0;
+}
+
+.ak-combo-contents span {
+    background: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #555;
+    border: 1px solid #e0e0e0;
+}
+
+/* Buy Button */
+.ak-buy-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.ak-buy-btn:hover {
+    background: linear-gradient(135deg, #2d5a87 0%, #3d6a97 100%);
+    box-shadow: 0 4px 15px rgba(30, 58, 95, 0.3);
+}
+
+.ak-buy-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.ak-pack-card.ak-popular .ak-buy-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20963c 100%);
+}
+
+.ak-pack-card.ak-popular .ak-buy-btn:hover {
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+/* Footer */
+.ak-store-footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #e0e7ef;
+}
+
+.ak-store-footer p {
+    margin: 0 0 8px 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.ak-back-link {
+    display: inline-block;
+    margin-top: 15px;
+    color: #2d5a87;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.ak-back-link:hover {
+    text-decoration: underline;
+}
+
+/* Notice */
+.ak-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.ak-notice a {
+    color: #1e3a5f;
+    font-weight: 600;
+}
+
+/* Success/Error Messages */
+.ak-store-message {
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.ak-store-message.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.ak-store-message.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ak-store-page {
+        padding: 25px 15px;
+    }
+    
+    .ak-store-header h1 {
+        font-size: 26px;
+    }
+    
+    .ak-packs-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ak-balance-pills {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .ak-pack-amount {
+        font-size: 40px;
+    }
+}

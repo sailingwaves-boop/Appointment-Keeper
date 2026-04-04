@@ -38,6 +38,21 @@ require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-credit-notifications.php'
 // Include webhook logger
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-webhook-logger.php';
 
+// Include credits store
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-credits-store.php';
+
+// Include Twilio service
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-twilio-service.php';
+
+// Include ElevenLabs service
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-elevenlabs-service.php';
+
+// Include Helper widget
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-helper-widget.php';
+
+// Include Team admin
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-team-admin.php';
+
 class AK_Customer_Dashboard {
     
     private static $instance = null;

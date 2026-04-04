@@ -502,7 +502,13 @@ class AK_Stripe_Billing {
         try {
             switch ($event['type']) {
                 case 'checkout.session.completed':
-                    $this->handle_checkout_completed($event['data']['object']);
+                    $session = $event['data']['object'];
+                    // Check if this is a credit pack purchase or subscription
+                    if (isset($session['metadata']['purchase_type']) && $session['metadata']['purchase_type'] === 'credit_pack') {
+                        $this->handle_credit_pack_purchase($session);
+                    } else {
+                        $this->handle_checkout_completed($session);
+                    }
                     $status = 'processed';
                     break;
                     
@@ -677,5 +683,16 @@ class AK_Stripe_Billing {
         $user = $users[0];
         
         update_user_meta($user->ID, 'ak_subscription_status', 'cancelled');
+    }
+    
+    /**
+     * Handle credit pack purchase
+     */
+    private function handle_credit_pack_purchase($session) {
+        $user_id = intval($session['metadata']['user_id']);
+        $pack_id = $session['metadata']['pack_id'];
+        
+        // Trigger the credit purchase action
+        do_action('ak_credit_purchase_completed', $user_id, $pack_id);
     }
 }
