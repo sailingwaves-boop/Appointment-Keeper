@@ -485,21 +485,51 @@ class AK_Stripe_Billing {
         $event = json_decode($payload, true);
         
         if (!$event || !isset($event['type'])) {
+            // Log invalid webhook
+            if (class_exists('AK_Webhook_Logger')) {
+                AK_Webhook_Logger::log('invalid', null, $payload, 'error', 'Invalid payload');
+            }
             return new WP_REST_Response(array('error' => 'Invalid payload'), 400);
         }
         
-        switch ($event['type']) {
-            case 'checkout.session.completed':
-                $this->handle_checkout_completed($event['data']['object']);
-                break;
-                
-            case 'invoice.paid':
-                $this->handle_invoice_paid($event['data']['object']);
-                break;
-                
-            case 'customer.subscription.deleted':
-                $this->handle_subscription_cancelled($event['data']['object']);
-                break;
+        $event_id = isset($event['id']) ? $event['id'] : null;
+        
+        // Log received webhook
+        if (class_exists('AK_Webhook_Logger')) {
+            AK_Webhook_Logger::log($event['type'], $event_id, $event, 'received');
+        }
+        
+        try {
+            switch ($event['type']) {
+                case 'checkout.session.completed':
+                    $this->handle_checkout_completed($event['data']['object']);
+                    $status = 'processed';
+                    break;
+                    
+                case 'invoice.paid':
+                    $this->handle_invoice_paid($event['data']['object']);
+                    $status = 'processed';
+                    break;
+                    
+                case 'customer.subscription.deleted':
+                    $this->handle_subscription_cancelled($event['data']['object']);
+                    $status = 'processed';
+                    break;
+                    
+                default:
+                    $status = 'ignored';
+            }
+            
+            // Update log status
+            if (class_exists('AK_Webhook_Logger')) {
+                AK_Webhook_Logger::log($event['type'], $event_id, $event, $status);
+            }
+            
+        } catch (Exception $e) {
+            // Log error
+            if (class_exists('AK_Webhook_Logger')) {
+                AK_Webhook_Logger::log($event['type'], $event_id, $event, 'error', $e->getMessage());
+            }
         }
         
         return new WP_REST_Response(array('received' => true), 200);
@@ -518,6 +548,60 @@ class AK_Stripe_Billing {
         update_user_meta($user_id, 'ak_has_helper', $include_helper ? 'yes' : 'no');
         update_user_meta($user_id, 'ak_stripe_customer_id', $session['customer']);
         update_user_meta($user_id, 'ak_stripe_subscription_id', $session['subscription']);
+        update_user_meta($user_id, 'ak_subscription_activated_date', current_time('mysql'));
+        
+        // Add plan credits
+        $this->add_plan_credits($user_id, $plan_id);
+        
+        // Trigger referral reward action
+        do_action('ak_subscription_activated', $user_id, $plan_id);
+    }
+    
+    /**
+     * Add plan credits to user
+     */
+    private function add_plan_credits($user_id, $plan_id) {
+        if (!isset($this->plans[$plan_id])) {
+            return;
+        }
+        
+        $plan = $this->plans[$plan_id];
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'ak_customer_credits';
+        
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+            return;
+        }
+        
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if ($existing) {
+            $wpdb->update(
+                $table,
+                array(
+                    'sms_credits' => $existing->sms_credits + $plan['sms_credits'],
+                    'call_credits' => $existing->call_credits + $plan['call_credits'],
+                    'email_credits' => $existing->email_credits + $plan['email_credits'],
+                    'plan_type' => $plan_id
+                ),
+                array('user_id' => $user_id)
+            );
+        } else {
+            $wpdb->insert(
+                $table,
+                array(
+                    'user_id' => $user_id,
+                    'sms_credits' => $plan['sms_credits'],
+                    'call_credits' => $plan['call_credits'],
+                    'email_credits' => $plan['email_credits'],
+                    'plan_type' => $plan_id
+                )
+            );
+        }
     }
     
     /**

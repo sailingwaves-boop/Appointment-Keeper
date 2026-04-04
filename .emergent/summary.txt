@@ -1,129 +1,124 @@
-<analysis>**original_problem_statement:**
-The user wants to build a WordPress plugin named AppointmentKeeper AK Debt Ledger. Initially, it was a simple billing ledger to track money owed between people, with SMS notifications on payment confirmation.
+<analysis>**original_problem_statement**: 
+The user wants to build a suite of WordPress plugins for their website, , which uses the Amelia plugin for appointment bookings. 
 
-The scope has since expanded significantly. The final goal is a suite of plugins for the user's website, , which uses the Amelia WordPress plugin for appointment bookings. The plugins must manage a credit system (SMS, calls, emails) for customers, allow customers to track debts owed to them (the ledger), and provide a unified dashboard for customers within their Amelia panel.
+**PRODUCT REQUIREMENTS**:
+1. **Debt Ledger Plugin**: Customer-facing tool to track debts.
+2. **Credit Manager Plugin**: Admin tool to manage customer credit balances, with a Zapier REST API endpoint for credit deduction.
+3. **Unified Customer Dashboard Plugin**: Single page showing Amelia appointments, debt ledger, usage history, and referrals.
+4. **Signup & Billing Flow**: A popup signup form -> Email verification -> Profile Completion Form -> Stripe Plan Selection (with 3-day trial & restricted credits) -> unified dashboard.
+5. **AppointmentKeeper Helper (Widget)**: An AI assistant (lite version of Chronicle) offered as a £12/mo add-on that uses Twilio and ElevenLabs to make calls and send SMS/GPS directions.
 
-**PRODUCT REQUIREMENTS:**
-1.  **Debt Ledger Plugin:** A customer-facing tool for users to track debts owed to them by others. It sends reminders via Twilio, which consumes the customer's credits.
-2.  **Credit Manager Plugin:** An admin-facing tool for site staff to manage customer credit balances (add/remove credits, handle refunds, free months).
-3.  **Unified Customer Dashboard:** A single page within the customer's WordPress/Amelia panel that displays their Amelia appointments, debt ledger, credit balance, referral options, and usage history.
-4.  **Credit System:** A centralized system to track and deduct credits (SMS, Voice Calls, Email) from customer accounts when they use any notification-related service.
-5.  **Amelia Integration:** The plugins must hook into the Amelia plugin to pull customer data and embed UI elements within the Amelia admin and customer panels.
-6.  **Twilio Integration:** Use Twilio for SMS and Voice Calls and SendGrid for emails, with API keys configured in the plugin settings.
+**User's preferred language**: English (INSTRUCT next agent to respond in the user's preferred language only).
 
-**User's preferred language**: English
-
-**what currently exists?**
-Two functional WordPress plugins have been created and delivered to the user as ZIP files:
-1.  ** (v2.0):** The customer-facing Debt Ledger. It allows customers to track debts, send reminders (which consume credits), and manage payments. It includes a referral system and integrates with Amelia.
-2.  ** (v1.1):** The admin-facing Credit Manager. It allows staff to view and adjust customer credit balances. It functions as both a standalone WordPress admin menu and a floating widget inside the Amelia staff admin panel. It supports four configurable subscription tiers (Basic, Standard, Premium, Enterprise).
-
-The agent was in the middle of creating a third component: a unified customer dashboard.
+**what currently exists?** 
+Three functional WordPress plugins:
+1. : Tracks debts and sends reminders.
+2. : Manages credits, includes a Zapier API endpoint.
+3. : Includes the unified dashboard, popup signup form, and Stripe plan selection page with 3-day trial logic.
 
 **Last working item**:
-*   **Last item agent was working:** The agent was building the files for a unified **Customer Dashboard**. This dashboard is intended to be a single page where a logged-in customer can see everything in one place: their Amelia appointments, their Debt Ledger, their credit balance, the referral form, and their usage history.
-*   **Status:** IN PROGRESS
-*   **Agent Testing Done:** N
-*   **Which testing method agent to use?** Manual testing by the user. The next agent must package the completed dashboard files into a new plugin ZIP file and provide the user with a download link. The agent cannot test WordPress plugins in this environment. The user will need to install and test it on their live WordPress site.
-*   **User Testing Done:** N
+- **Last item agent was working**: Building the Profile Completion Form () for the  plugin. This form sits between email verification and Stripe plan selection. It collects Full Name, Phone (with country dropdown), Preferred Contact Method, Referral Source, and an Invite Friends dynamic block.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N (WordPress plugins cannot be run/tested locally in this container).
+- **Which testing method agent to use?**: NA (Testing must be done manually by the user on their live WordPress site by downloading the generated ZIP).
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-There are no outstanding bugs or issues. The main pending item is the completion of the in-progress task.
+No active bugs reported. All work is feature development.
 
 **In progress Task List**:
-*   **Task 1: Complete and Deliver the Unified Customer Dashboard (P0)**
-    *   **Where to resume:** The agent had already started creating the files for the dashboard (, shortcodes, CSS, and JS files). The next step is to review these files, complete any unfinished logic, package everything into a new installable WordPress plugin ZIP file (e.g., ), and provide the download link to the user with instructions on how to create the dashboard page using the new shortcodes.
-    *   **What will be achieved with this?** Customers will have a single, convenient dashboard page for all their activities, fulfilling a key user requirement for a seamless experience.
-    *   **Status:** IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?** N/A (User must test on their WordPress site).
+- **Task 1: Profile Completion Form & Updated Verification Email (P0)**
+   - **Where to resume**:  (File was created but is empty).
+   - **What will be achieved with this?**: Completes the multi-step signup flow (Popup Signup -> Verify Email -> Profile Form -> Stripe Checkout).
+   - **Status**: IN PROGRESS
+   - **Should Test frontend/backend/both after fix?**: User must test manually on their WP site.
+   - **Blocked on something**: None.
 
-**Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   **GPS Directions Feature (P1):** The user requested a feature where entering a postcode for an appointment triggers a text message with GPS directions. This needs to be designed and implemented, likely as an enhancement to the  or the main  plugin.
-*   **Future Tasks:**
-    *   **Main AppointmentKeeper Plugin (P2):** The user wants a single, master plugin for  that new customers can download. This plugin would bundle all the functionalities (appointment reminders, debt ledger, credit system) into one package. The agent has already gathered initial requirements for this, but the user has deferred the build.
+**Upcoming and Future Tasks**:
+- **Task 2: Twilio & ElevenLabs Integration (P0)**: Hook up Twilio (for phone/SMS) and ElevenLabs (custom voices) using the keys the user provided. Store these keys in WP settings, not frontend code.
+- **Task 3: AppointmentKeeper Helper Widget (P1)**: Build the AI assistant widget that customers can use if they purchase the £12/month add-on (or Enterprise plan). Automates Amelia appointments, SMS, calls, and GPS directions.
+- **Task 4: Team Admin Panel (P2)**: Build a dashboard for Premium (up to 3 members) and Enterprise (unlimited) owners to invite team members and allocate their credit pools in increments of 20.
+- **Task 5: Google Logo for OAuth (P3)**: Ensure the Nextend Google login button on the popup uses the proper Google logo styling.
 
-**Completed work in this session**
-*   ** Plugin (v2.0 - DONE):** Created a comprehensive WordPress plugin for customers to track debts. Includes credit-based reminders via Twilio/SendGrid, a referral system, and Amelia integration.
-*   ** Plugin (v1.1 - DONE):** Created a WordPress plugin for staff to manage customer credit balances. Features dual access (standalone admin menu and an integrated Amelia admin widget) and supports four configurable plan tiers.
-*   **Requirement Refinement (DONE):** Successfully navigated a complex series of conversations to evolve a vague idea into a detailed, multi-plugin architecture tailored to the user's business needs.
+**Completed work in this session**:
+- Added Zapier REST API endpoint () to Credit Manager. (DONE)
+- Built modern popup signup form with email/password and Google login hook. (DONE)
+- Built Plan Selection Page () with Stripe checkout, Stripe Webhooks, and 3-day trial logic. (DONE)
+- Added UI styling (light blue cards, green/orange accents, pill buttons) and direct-to-checkout button logic. (DONE)
 
-**Earlier issues found/mentioned but not fixed**
-None. All raised issues, such as adding a fourth pricing tier, were addressed and resolved promptly.
+**Earlier issues found/mentioned but not fixed**:
+- None. 
 
-**Known issue recurrence from previous fork**
-N/A
+**Known issue recurrence from previous fork**:
+- **Issue**: User struggles significantly with the platform's UI (Code Server, GitHub saves, unzipping/zipping files).
+- **Recurrence count**: 1
+- **Status**: RESOLVED
+- **Note for Next Agent**: ALWAYS package the WordPress plugin into a clean ZIP file using  and provide explicit, step-by-step instructions on how the user can download it from the Code Server using the provided password.
 
-**Code Architecture**
-The project is a suite of interconnected WordPress plugins built with PHP, JavaScript (jQuery), and CSS.
-*   : Handles customer-facing debt tracking and reminders.
-*   : Handles staff-facing credit management.
-*    (In Progress): Will provide a unified dashboard page template and shortcodes.
+**Code Architecture**:
 
-The plugins share custom database tables (e.g., , ) and interact with the core WordPress user system and the Amelia plugin via hooks.
 
-**Key Technical Concepts**
-*   **Platform:** WordPress Plugin Development
-*   **Backend:** PHP
-*   **Frontend:** JavaScript (jQuery), CSS, HTML (via PHP templates and shortcodes)
-*   **Database:** MySQL (via WordPress )
-*   **Core Concepts:** WordPress hooks (actions, filters), shortcodes, custom admin menus, AJAX via , creating custom database tables on plugin activation.
+**Key Technical Concepts**:
+WordPress Plugin Architecture, PHP, jQuery/AJAX, Stripe Subscriptions & Webhooks, REST APIs, Twilio API, ElevenLabs API.
 
-**key DB schema**
-*   : {user_id, sms_credits, call_credits, email_credits}
-*   : {id, user_id, transaction_type, amount, channel, reason, timestamp}
-*   : {id, creditor_user_id, debtor_details, amount, balance, status, created_at}
-*   : {id, ledger_id, amount, payment_date, note}
+**key DB schema**:
+- : {user_id, sms_credits, call_credits, email_credits}
+- : {id, creditor_user_id, debtor_details, amount, balance, status, created_at}
 
-**changes in tech stack**
-The project pivoted from a generic web app to a specific WordPress plugin architecture based on user clarification.
+**changes in tech stack**:
+- Integration of Stripe, Twilio, and ElevenLabs via API.
 
-**All files of reference**
-*   : Completed and delivered.
-*   : Completed and delivered.
-*   The agent was working on files for the new dashboard plugin, including , , , and . These are not yet complete or packaged.
+**All files of reference**:
+-  (created but needs content)
+-  (Latest working zipped plugin provided to the user)
+-  and  (Guides/docs created for the user)
 
-**key api endpoints**
-The plugins use WordPress's built-in AJAX handler  to process asynchronous requests from the frontend JavaScript, rather than using a REST API.
+**Areas that need refactoring**:
+- N/A
 
-**Critical Info for New Agent**
-*   **You CANNOT test the code.** This is a WordPress plugin build in a non-WordPress environment. Your workflow is: build files -> create ZIP -> provide a download link. The user is responsible for all testing on their live site.
-*   **The user is non-technical but has a clear business vision.** Communicate simply and wait for full requirements before building to avoid rework. The user is sensitive to wasted effort and costs.
-*   **The user gets confused by the platform's UI/UX,** especially forking. Be patient and guide them clearly.
-*   The architecture consists of multiple, interconnected plugins. A future task might be to merge them into one, but for now, continue building the dashboard as a new, separate plugin to maintain modularity.
+**key api endpoints**:
+- WordPress AJAX endpoints for the forms.
+- 
+- 
 
-**documents and test reports created in this job**
-N/A
+**Critical Info for New Agent**:
+1. **THE CHRONICLE RULE (CRITICAL)**: The user mandated: do not start work unless I say the word chronicle. **The user HAS said chronicle buddy chronicle in their last message**, meaning you are cleared to build the profile form and Twilio/ElevenLabs logic right now.
+2. **Design Preferences**: User requested forms to look cool utilizing blues, greens, and orange.
+3. **No Local WordPress Testing**: You cannot test the WP code using standard testing agents or curls because WP is not installed in the container. Rely on static code checks, zip the file via bash, and instruct the user to test on their live site.
+4. **API Keys Provided**: The user provided live keys in the chat:
+   - Twilio SID: 
+   - Twilio Auth: 
+   - Twilio Phone: 
+   - ElevenLabs API: 
+   *Do NOT expose these in the public frontend codebase. Store them securely in WP options/admin settings.*
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks if the dashboard will break anything. (Status: Addressed. Agent confirmed it's additive).
-2.  **User:** Asks how the Credit Manager plugin is used. (Status: Addressed. Agent explained it's an admin tool).
-3.  **User:** Asks where the Credit Manager appears. (Status: Addressed. Agent explained it appears in two places: WP sidebar and Amelia admin).
-4.  **User:** Confirms the agent correctly built the dual-access feature as requested. (Status: Acknowledged).
-5.  **User:** Gives the go-ahead to build the dashboard, expresses satisfaction but also confusion with the platform's branching. (Status: Acknowledged).
-6.  **User:** Asks if the chat is done if they fork it. (Status: Addressed. Agent advised waiting for the build).
-7.  **User:** Asks if the chat context is saved. (Status: Addressed. Agent confirmed it is).
-8.  **User:** Expresses confusion about forking again. (Status: Agent gently redirected to the task).
-9.  **User:** Asks to be notified when the download is ready. (Status: Acknowledged).
-10. **User:** please let me know when I can download (Status: **PENDING**. This is the immediate user request to fulfill after completing the dashboard build).
+**documents and test reports created in this job**:
+- 
+- 
+- 
 
-**Project Health Check:**
-*   **Broken:** None.
-*   **Mocked:** The entire development environment is a simulation. The agent cannot run or test the WordPress plugins.
+**Last 10 User Messages and any pending HUMAN messages**:
+1. *User*: Asked what is needed for ElevenLabs API (just API key).
+2. *User*: Provided Twilio SID, Auth Token, Phone number, and ElevenLabs API key.
+3. *User*: Said the magic trigger word **chronicle buddy chronicle** and asked to make the forms look cool (blues/greens/orange) and mentioned doing the Google Logo later.
+*Pending Action*: Agent created  but needs to populate it with the requested form fields, apply the requested color scheme, and handle the logic.
 
-**3rd Party Integrations**
-*   **Amelia:** WordPress appointment plugin. The new plugins are designed to integrate with it. Requires User to have it installed.
-*   **Twilio:** For SMS & Voice Calls. Requires User API Key.
-*   **Twilio SendGrid:** For Emails. Requires User API Key.
+**Project Health Check**:
+- Mocked (WP Plugins cannot be executed natively in this raw Kubernetes container without a WP instance).
 
-**Testing status**
-*   **Testing agent used after significant changes:** NO (Not applicable for this task type).
-*   **Troubleshoot agent used after agent stuck in loop:** NO
-*   **Test files created:** None.
-*   **Known regressions:** None.
+**3rd Party Integrations**:
+- Stripe (Payments) — requires User API Key (Provided)
+- Twilio (SMS/Voice) — requires User API Key (Provided)
+- ElevenLabs (Voice) — requires User API Key (Provided)
 
-**Credentials to test flow:**
-N/A. The user provides their own API keys for Twilio/SendGrid within the plugin settings on their live WordPress site.
+**Testing status**:
+- Testing agent used after significant changes: NO (Manual user testing required)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: None
 
-**What agent forgot to execute**
-The agent did not forget anything, but was interrupted mid-task. The key action is to complete the in-progress **Unified Customer Dashboard** and deliver it to the user. The GPS directions feature was noted but correctly deferred as an upcoming task.</analysis>
+**Credentials to test flow**:
+N/A (Testing done by user on their live WP instance).
+
+**What agent forgot to execute**:
+The previous agent created the  file but didn't write any of the actual PHP/HTML logic inside it before the session ended. The next agent should immediately resume from this file.</analysis>

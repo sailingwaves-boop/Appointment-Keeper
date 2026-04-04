@@ -1,0 +1,585 @@
+/**
+ * AppointmentKeeper Profile Form Styles
+ * Colors: Blues, Greens, Orange accents
+ */
+
+/* Page Container */
+.ak-profile-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e8f4f8 0%, #f0f7f4 50%, #fff8f0 100%);
+    padding: 40px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.ak-profile-container {
+    max-width: 680px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(30, 58, 95, 0.12);
+    overflow: hidden;
+}
+
+/* Header */
+.ak-profile-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    padding: 40px 30px 50px;
+    text-align: center;
+    color: #fff;
+    position: relative;
+}
+
+.ak-header-icon {
+    width: 70px;
+    height: 70px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.ak-header-icon svg {
+    width: 35px;
+    height: 35px;
+    stroke: #fff;
+}
+
+.ak-profile-header h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.ak-profile-header p {
+    margin: 0;
+    opacity: 0.85;
+    font-size: 15px;
+}
+
+/* Progress Bar */
+.ak-progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+    gap: 0;
+}
+
+.ak-progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.ak-step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    border: 3px solid rgba(255,255,255,0.5);
+    position: relative;
+}
+
+.ak-progress-step.completed .ak-step-dot {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.ak-progress-step.completed .ak-step-dot::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.ak-progress-step.active .ak-step-dot {
+    background: #ff9800;
+    border-color: #ff9800;
+    box-shadow: 0 0 0 4px rgba(255,152,0,0.3);
+}
+
+.ak-step-label {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.ak-progress-step.completed .ak-step-label,
+.ak-progress-step.active .ak-step-label {
+    opacity: 1;
+}
+
+.ak-progress-line {
+    width: 40px;
+    height: 3px;
+    background: rgba(255,255,255,0.3);
+    margin: 0 5px;
+    margin-bottom: 24px;
+}
+
+.ak-progress-line.completed {
+    background: #28a745;
+}
+
+/* Form */
+.ak-profile-form {
+    padding: 30px;
+}
+
+/* Form Sections */
+.ak-form-section {
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.ak-form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+}
+
+.ak-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.ak-section-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #1e3a5f;
+    font-weight: 600;
+}
+
+.ak-section-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.ak-icon-user {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+.ak-icon-user::before { content: '👤'; }
+
+.ak-icon-settings {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+.ak-icon-settings::before { content: '⚙️'; }
+
+.ak-icon-gift {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+.ak-icon-gift::before { content: '🎁'; }
+
+.ak-icon-shield {
+    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+}
+.ak-icon-shield::before { content: '🛡️'; }
+
+/* Form Rows */
+.ak-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .ak-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Form Groups */
+.ak-form-group {
+    margin-bottom: 18px;
+}
+
+.ak-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.ak-form-group label .required {
+    color: #e53935;
+}
+
+.ak-form-group label .optional {
+    color: #999;
+    font-weight: 400;
+    font-size: 12px;
+}
+
+.ak-form-group input[type="text"],
+.ak-form-group input[type="email"],
+.ak-form-group input[type="tel"],
+.ak-form-group select,
+.ak-select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e0e7ef;
+    border-radius: 12px;
+    font-size: 15px;
+    color: #333;
+    background: #fff;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.ak-form-group input:focus,
+.ak-form-group select:focus {
+    outline: none;
+    border-color: #2d5a87;
+    box-shadow: 0 0 0 3px rgba(45, 90, 135, 0.1);
+}
+
+.ak-form-group input:read-only {
+    background: #f5f7fa;
+    color: #666;
+}
+
+.ak-form-group input::placeholder {
+    color: #aab;
+}
+
+.ak-field-note {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: #888;
+}
+
+/* Email verified badge */
+.ak-verified-badge {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-top: 6px;
+}
+
+.ak-verified-badge::before {
+    content: '✓ ';
+}
+
+/* Phone Input */
+.ak-phone-input {
+    display: flex;
+    gap: 10px;
+}
+
+.ak-country-select {
+    width: 100px !important;
+    flex-shrink: 0;
+}
+
+.ak-phone-input input {
+    flex: 1;
+}
+
+/* Referral Section */
+.ak-referral-bonus-card {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border: 2px solid #ffc107;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+}
+
+.ak-bonus-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.ak-bonus-icon {
+    font-size: 32px;
+}
+
+.ak-bonus-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ak-bonus-text strong {
+    color: #e65100;
+    font-size: 16px;
+}
+
+.ak-bonus-text span {
+    color: #8d6e0a;
+    font-size: 13px;
+}
+
+/* Checkbox Styles */
+.ak-checkbox-group {
+    margin-bottom: 14px;
+}
+
+.ak-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #444;
+    line-height: 1.5;
+}
+
+.ak-checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.ak-checkmark {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border: 2px solid #cdd4de;
+    border-radius: 6px;
+    background: #fff;
+    position: relative;
+    transition: all 0.2s;
+    margin-top: 1px;
+}
+
+.ak-checkbox-label input:checked + .ak-checkmark {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    border-color: #28a745;
+}
+
+.ak-checkbox-label input:checked + .ak-checkmark::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.ak-checkbox-label a {
+    color: #2d5a87;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.ak-checkbox-label a:hover {
+    text-decoration: underline;
+}
+
+/* Invite Section */
+.ak-invite-section {
+    background: #f8fafb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.ak-invite-person {
+    background: #fff;
+    border: 1px solid #e0e7ef;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.ak-invite-person:last-child {
+    margin-bottom: 0;
+}
+
+.ak-invite-person h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #2d5a87;
+    font-weight: 600;
+}
+
+.ak-small-select {
+    max-width: 200px;
+}
+
+/* Consent Section */
+.ak-consent-section {
+    background: #f8fafb;
+    margin-left: -30px;
+    margin-right: -30px;
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-top: 25px;
+    padding-bottom: 25px;
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.ak-consent-boxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Submit Button */
+.ak-form-actions {
+    padding: 0 30px 30px;
+    margin: 0 -30px -30px;
+    background: linear-gradient(to top, #f8fafb 0%, #fff 100%);
+}
+
+.ak-error-message {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    color: #c62828;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    display: none;
+    border: 1px solid #ef9a9a;
+}
+
+.ak-error-message.active {
+    display: block;
+}
+
+.ak-submit-btn {
+    width: 100%;
+    padding: 18px 24px;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.ak-green-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20963c 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.35);
+}
+
+.ak-green-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(40, 167, 69, 0.45);
+}
+
+.ak-green-btn:active {
+    transform: translateY(0);
+}
+
+.ak-green-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ak-btn-arrow {
+    font-size: 20px;
+    transition: transform 0.3s;
+}
+
+.ak-green-btn:hover .ak-btn-arrow {
+    transform: translateX(5px);
+}
+
+.ak-form-note {
+    text-align: center;
+    margin: 15px 0 0 0;
+    font-size: 13px;
+    color: #888;
+}
+
+/* Loading State */
+.ak-submit-btn.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.ak-submit-btn.loading .ak-btn-text::after {
+    content: '...';
+    animation: ak-dots 1s infinite;
+}
+
+@keyframes ak-dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ak-profile-page {
+        padding: 20px 10px;
+    }
+    
+    .ak-profile-container {
+        border-radius: 20px;
+    }
+    
+    .ak-profile-header {
+        padding: 30px 20px 40px;
+    }
+    
+    .ak-profile-header h1 {
+        font-size: 24px;
+    }
+    
+    .ak-profile-form {
+        padding: 25px 20px;
+    }
+    
+    .ak-form-actions {
+        padding: 0 20px 25px;
+        margin: 0 -20px -25px;
+    }
+    
+    .ak-progress-bar {
+        transform: scale(0.85);
+    }
+    
+    .ak-consent-section {
+        margin-left: -20px;
+        margin-right: -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+/* Notice */
+.ak-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.ak-notice a {
+    color: #1e3a5f;
+    font-weight: 600;
+}

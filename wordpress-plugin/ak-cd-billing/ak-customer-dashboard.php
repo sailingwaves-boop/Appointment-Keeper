@@ -26,6 +26,18 @@ require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-stripe-billing.php';
 // Include admin settings
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-admin-settings.php';
 
+// Include profile form
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-profile-form.php';
+
+// Include referral system
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-referral-system.php';
+
+// Include credit notifications
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-credit-notifications.php';
+
+// Include webhook logger
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-webhook-logger.php';
+
 class AK_Customer_Dashboard {
     
     private static $instance = null;
