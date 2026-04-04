@@ -73,9 +73,7 @@ STRIPE SETUP REQUIRED
 =====================================
 
 1. Go to WordPress Admin > Settings > AppointmentKeeper
-2. Enter your Stripe keys:
-   - Publishable Key: pk_live_51T6JjoKF70P1XcQvybPJ94b5fGTiiF3jYm1MTeDnnw3CYXzyIJzzl8yYwEwtVZXZEc04oqQ5G3CUUVJT922AVVXV005oW9Tsl7
-   - Secret Key: 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
+2. Enter your Stripe keys (from your Stripe Dashboard)
 
 3. In Stripe Dashboard, add webhook:
    URL: https://appointmentkeeper.co.uk/wp-json/ak-billing/v1/webhook
