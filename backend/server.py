@@ -677,10 +677,10 @@ Be direct, helpful, and efficient. Don't be overly formal or use unnecessary ple
 User's name: {current_user['name']}"""
 
         chat_sessions[session_key] = LlmChat(
-            api_key=os.environ.get('EMERGENT_LLM_KEY'),
+            api_key=os.environ.get('ANTHROPIC_API_KEY'),
             session_id=session_key,
             system_message=system_message
-        ).with_model("openai", "gpt-5.2")
+        ).with_model("anthropic", "claude-sonnet-4-6")
     
     chat_instance = chat_sessions[session_key]
     

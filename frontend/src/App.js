@@ -963,8 +963,9 @@ const ChatView = () => {
     
     toast.info(selectedFile ? 'Sending with image...' : 'Sending...');
 
-    const userMessage = input.trim() || "What do you see in this image?";
-    setInput('');
+    // Get the message text - use default only if sending just an image
+    const userMessage = input.trim() ? input.trim() : (selectedFile ? "What do you see in this image?" : "");
+    setInput(''); // Clear input immediately
     
     // Create message with optional image
     const newMessage = { 
