@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AK_DASHBOARD_VERSION', '1.1.0');
+define('AK_DASHBOARD_VERSION', '3.2.0');
 define('AK_DASHBOARD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AK_DASHBOARD_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -64,6 +64,12 @@ require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-noshow-tracker.php';
 
 // Include Debt auto-chase
 require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-debt-autochase.php';
+
+// Include AI Outreach
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-ai-outreach.php';
+
+// Include Marketing Card
+require_once AK_DASHBOARD_PLUGIN_DIR . 'includes/class-marketing-card.php';
 
 class AK_Customer_Dashboard {
     

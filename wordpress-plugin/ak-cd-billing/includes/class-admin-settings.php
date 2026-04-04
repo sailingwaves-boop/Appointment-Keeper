@@ -66,6 +66,26 @@ class AK_Dashboard_Admin_Settings {
         // Legal pages
         register_setting('ak_dashboard_settings', 'ak_terms_page_id');
         register_setting('ak_dashboard_settings', 'ak_privacy_page_id');
+        
+        // AI Outreach settings
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_enabled', array(
+            'default' => 'no',
+            'sanitize_callback' => 'sanitize_text_field'
+        ));
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_daily_limit', array(
+            'default' => 5,
+            'sanitize_callback' => 'absint'
+        ));
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_sms_cost', array(
+            'default' => 2,
+            'sanitize_callback' => 'absint'
+        ));
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_call_cost', array(
+            'default' => 2,
+            'sanitize_callback' => 'absint'
+        ));
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_sms_template');
+        register_setting('ak_dashboard_settings', 'ak_ai_outreach_call_script');
     }
     
     public function enqueue_admin_scripts($hook) {
@@ -98,6 +118,7 @@ class AK_Dashboard_Admin_Settings {
                 <button class="ak-tab-btn" data-tab="referrals">Referrals</button>
                 <button class="ak-tab-btn" data-tab="legal">Legal Pages</button>
                 <button class="ak-tab-btn" data-tab="webhooks">Webhooks</button>
+                <button class="ak-tab-btn" data-tab="outreach">AI Outreach</button>
             </div>
             
             <form method="post" action="options.php">
@@ -732,6 +753,94 @@ class AK_Dashboard_Admin_Settings {
                                 </td>
                             </tr>
                         </table>
+                    </div>
+                </div>
+                
+                <!-- AI Outreach Tab -->
+                <div class="ak-tab-content" id="ak-tab-outreach">
+                    <div class="ak-settings-section">
+                        <h2>AI Outreach Settings</h2>
+                        <p class="description">Let your customers invite friends via AI-powered SMS or voice calls. They spend credits, you gain new customers!</p>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Enable AI Outreach</th>
+                                <td>
+                                    <label class="ak-toggle">
+                                        <input type="checkbox" name="ak_ai_outreach_enabled" value="yes" <?php checked(get_option('ak_ai_outreach_enabled'), 'yes'); ?>>
+                                        <span class="ak-toggle-slider"></span>
+                                    </label>
+                                    <p class="description">Allow customers to send promotional invites to their contacts</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Daily Limit Per User</th>
+                                <td>
+                                    <input type="number" name="ak_ai_outreach_daily_limit" 
+                                           value="<?php echo esc_attr(get_option('ak_ai_outreach_daily_limit', 5)); ?>" 
+                                           min="1" max="50" class="small-text">
+                                    <p class="description">Maximum outreach messages a user can send per day (prevents spam)</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">SMS Credit Cost</th>
+                                <td>
+                                    <input type="number" name="ak_ai_outreach_sms_cost" 
+                                           value="<?php echo esc_attr(get_option('ak_ai_outreach_sms_cost', 2)); ?>" 
+                                           min="1" max="10" class="small-text">
+                                    <span>credits per SMS outreach</span>
+                                    <p class="description">Recommended: 2 (premium action = higher cost)</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Call Credit Cost</th>
+                                <td>
+                                    <input type="number" name="ak_ai_outreach_call_cost" 
+                                           value="<?php echo esc_attr(get_option('ak_ai_outreach_call_cost', 2)); ?>" 
+                                           min="1" max="10" class="small-text">
+                                    <span>minutes per AI voice call</span>
+                                    <p class="description">Recommended: 2 (premium action = higher cost)</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">SMS Message Template</th>
+                                <td>
+                                    <?php 
+                                    $default_sms = "Hi {contact_name}, your friend {sender_name} thought you might like AppointmentKeeper - it helps businesses chase payments and manage appointments automatically. Get a free trial: {signup_link} Reply STOP to opt out.";
+                                    $current_sms = get_option('ak_ai_outreach_sms_template', $default_sms);
+                                    ?>
+                                    <textarea name="ak_ai_outreach_sms_template" rows="4" class="large-text"><?php echo esc_textarea($current_sms); ?></textarea>
+                                    <p class="description">
+                                        Variables: <code>{contact_name}</code> <code>{sender_name}</code> <code>{signup_link}</code>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">AI Call Script</th>
+                                <td>
+                                    <?php 
+                                    $default_call = "Hello {contact_name}, I'm calling on behalf of your friend {sender_name}. They've been using AppointmentKeeper to manage their appointments and chase payments automatically, and they thought you might find it useful too. You can try it free for 3 days at appointmentkeeper.co.uk. Have a great day!";
+                                    $current_call = get_option('ak_ai_outreach_call_script', $default_call);
+                                    ?>
+                                    <textarea name="ak_ai_outreach_call_script" rows="5" class="large-text"><?php echo esc_textarea($current_call); ?></textarea>
+                                    <p class="description">
+                                        Variables: <code>{contact_name}</code> <code>{sender_name}</code> (spoken by AI voice)
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <div class="ak-info-box">
+                            <h4>How It Works</h4>
+                            <ol>
+                                <li>Customer goes to <strong>/ai-outreach</strong> page</li>
+                                <li>They enter a friend's name & phone number</li>
+                                <li>Choose SMS or AI Voice Call</li>
+                                <li>Credits are deducted, message is sent</li>
+                                <li>If friend signs up, referrer gets bonus credits!</li>
+                            </ol>
+                            <p><strong>Marketing Page:</strong> Share <code><?php echo home_url('/get-started'); ?></code> on TikTok/Instagram!</p>
+                        </div>
                     </div>
                 </div>
                 

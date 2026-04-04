@@ -39,6 +39,38 @@ Build a suite of WordPress plugins for appointmentkeeper.co.uk that work with th
 
 ---
 
+## V3.2 NEW FEATURES
+
+### 8. AI Outreach System (Viral Growth Engine) 
+- **File:** `class-ai-outreach.php`
+- **Page:** `/ai-outreach`
+- **Features:**
+  - Customers send AI-powered invites to their contacts
+  - SMS or AI Voice Call options
+  - Customizable pitch templates (admin can edit)
+  - Daily limit per user (default: 5/day to prevent spam)
+  - GDPR compliant with opt-out link
+  - Referral integration - if contact signs up, sender gets credits
+  - Full outreach history tracking
+  - Conversion tracking (who signed up)
+- **Credit Cost:** 2 SMS or 2 Call minutes per outreach (configurable)
+- **Admin Toggle:** Settings → AppointmentKeeper → AI Outreach
+
+### 9. Marketing Card (Shareable Landing Page) 
+- **File:** `class-marketing-card.php`
+- **Page:** `/get-started`
+- **Purpose:** Beautiful, mobile-first landing card for social media sharing
+- **Features:**
+  - Stunning animated design (TikTok/Instagram ready)
+  - Highlights all key features (AI calls, SMS, debt chasing, GPS)
+  - Social proof section
+  - Direct CTA to signup with referral tracking
+  - Open Graph meta tags for social sharing
+  - Mobile responsive
+- **Usage:** Share `yoursite.com/get-started?ref=REFCODE` on TikTok, Instagram, etc.
+
+---
+
 ## V3.0 FEATURES (All Complete!)
 
 ### 1. Credits Store 💳
@@ -221,9 +253,9 @@ ak_last_low_credit_notification
 
 ### P1 - Next Up
 - **Google Logo for OAuth** - Proper styling on Nextend login button
-- **Amelia Deep Integration** - Pull real appointment data, auto-send reminders
 
 ### P2 - Future
+- Amelia Deep Integration - Pull real appointment data, auto-send reminders
 - Multi-language support
 - Export debts/usage to CSV/Excel
 - Bulk reminder actions
@@ -259,9 +291,15 @@ ak_last_low_credit_notification
 ---
 
 ## Last Updated
-April 2025 - v3.0 Complete with:
+April 2025 - v3.2 Complete with:
 - Credits Store (SMS/Call packs with Stripe)
 - Twilio SMS & Voice integration (fully wired)
 - ElevenLabs AI voice integration
 - AppointmentKeeper Helper Widget
 - Team Admin Panel (Premium/Enterprise)
+- Auto-Reminders (Amelia integration)
+- Booking Confirmations (Email/SMS/AI Call toggle)
+- No-Show Tracker
+- Debt Auto-Chase
+- **NEW: AI Outreach System** - Customers invite friends via SMS or AI calls
+- **NEW: Marketing Card Page** - Shareable /get-started page for TikTok/Instagram
