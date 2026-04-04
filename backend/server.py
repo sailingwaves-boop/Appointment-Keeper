@@ -900,10 +900,14 @@ async def get_file(file_id: str):
 ADMIN_EMAIL = "sailingwaves@gmail.com"  # Your admin email
 
 async def require_admin(current_user: dict = Depends(get_current_user)):
-    """Check if user is admin"""
-    if current_user["email"] != ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
+    """Check if user is admin or partner"""
+    if current_user["email"] == ADMIN_EMAIL:
+        return current_user
+    # Check if user is a partner
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    if partner:
+        return current_user
+    raise HTTPException(status_code=403, detail="Admin access required")
 
 @api_router.post("/admin/magic-link")
 async def create_magic_link(admin: dict = Depends(require_admin)):
@@ -963,6 +967,272 @@ async def restore_user_access(user_id: str, admin: dict = Depends(require_admin)
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "Access restored"}
+
+# ============== OWNER ADMIN PANEL ==============
+
+class AdminPartner(BaseModel):
+    email: str
+
+class UserCreditsUpdate(BaseModel):
+    credits: int
+
+class UserRulesUpdate(BaseModel):
+    rules: List[str]
+
+class CreditWarningThreshold(BaseModel):
+    threshold: int
+
+@api_router.get("/admin/dashboard")
+async def admin_dashboard(admin: dict = Depends(require_admin)):
+    """Get admin dashboard stats"""
+    total_users = await db.users.count_documents({})
+    active_users = await db.users.count_documents({"access_revoked": {"$ne": True}})
+    total_conversations = await db.conversations.count_documents({})
+    
+    # Get recent users
+    recent_users = await db.users.find(
+        {}, 
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "created_at": 1, "credits": 1, "access_revoked": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "total_conversations": total_conversations,
+        "recent_users": recent_users
+    }
+
+@api_router.get("/admin/users")
+async def admin_get_all_users(admin: dict = Depends(require_admin), search: Optional[str] = None):
+    """Get all users with optional search"""
+    query = {}
+    if search:
+        query = {"$or": [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}}
+        ]}
+    
+    users = await db.users.find(
+        query,
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "created_at": 1, "credits": 1, 
+         "access_revoked": 1, "is_subscribed": 1, "plan": 1, "rules": 1}
+    ).sort("created_at", -1).to_list(500)
+    
+    return {"users": users}
+
+@api_router.get("/admin/user/{user_id}")
+async def admin_get_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Get single user details"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get user stats
+    conversations = await db.conversations.count_documents({"user_id": user_id})
+    contacts = await db.contacts.count_documents({"user_id": user_id})
+    memories = await db.memories.count_documents({"user_id": user_id})
+    
+    return {
+        "user": user,
+        "stats": {
+            "conversations": conversations,
+            "contacts": contacts,
+            "memories": memories
+        }
+    }
+
+@api_router.post("/admin/user/{user_id}/credits")
+async def admin_update_credits(user_id: str, data: UserCreditsUpdate, admin: dict = Depends(require_admin)):
+    """Add or remove credits from user"""
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$inc": {"credits": data.credits}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": f"Credits updated by {data.credits}"}
+
+@api_router.delete("/admin/user/{user_id}")
+async def admin_delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Delete a user completely"""
+    # Delete user data
+    await db.contacts.delete_many({"user_id": user_id})
+    await db.memories.delete_many({"user_id": user_id})
+    await db.conversations.delete_many({"user_id": user_id})
+    await db.uploads.delete_many({"user_id": user_id})
+    result = await db.users.delete_one({"id": user_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted"}
+
+@api_router.post("/admin/partner")
+async def admin_add_partner(data: AdminPartner, admin: dict = Depends(require_admin)):
+    """Add a partner with admin access"""
+    await db.admin_partners.update_one(
+        {"email": data.email},
+        {"$set": {"email": data.email, "added_by": admin["id"], "added_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"message": f"Partner {data.email} added"}
+
+@api_router.delete("/admin/partner/{email}")
+async def admin_remove_partner(email: str, admin: dict = Depends(require_admin)):
+    """Remove a partner"""
+    await db.admin_partners.delete_one({"email": email})
+    return {"message": "Partner removed"}
+
+@api_router.get("/admin/partners")
+async def admin_get_partners(admin: dict = Depends(require_admin)):
+    """Get all admin partners"""
+    partners = await db.admin_partners.find({}, {"_id": 0}).to_list(100)
+    return {"partners": partners}
+
+@api_router.post("/admin/settings/credit-warning")
+async def admin_set_credit_warning(data: CreditWarningThreshold, admin: dict = Depends(require_admin)):
+    """Set global credit warning threshold"""
+    await db.settings.update_one(
+        {"key": "credit_warning_threshold"},
+        {"$set": {"key": "credit_warning_threshold", "value": data.threshold}},
+        upsert=True
+    )
+    return {"message": f"Credit warning threshold set to {data.threshold}"}
+
+# ============== USER SETTINGS/ADMIN PANEL ==============
+
+class UserSettings(BaseModel):
+    rules: Optional[List[str]] = None
+    custom_sms_templates: Optional[List[str]] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    notification_email: Optional[bool] = None
+    notification_sms: Optional[bool] = None
+    custom_greeting: Optional[str] = None
+
+class HomeAssistantConfig(BaseModel):
+    url: str
+    access_token: str
+
+@api_router.get("/user/settings")
+async def get_user_settings(current_user: dict = Depends(get_current_user)):
+    """Get user settings"""
+    settings = await db.user_settings.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "credits": 1, "plan": 1, "is_subscribed": 1})
+    
+    return {
+        "settings": settings or {},
+        "credits": user.get("credits", 0),
+        "plan": user.get("plan"),
+        "is_subscribed": user.get("is_subscribed", False)
+    }
+
+@api_router.post("/user/settings")
+async def update_user_settings(settings: UserSettings, current_user: dict = Depends(get_current_user)):
+    """Update user settings"""
+    update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
+    update_data["user_id"] = current_user["id"]
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.user_settings.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": update_data},
+        upsert=True
+    )
+    return {"message": "Settings updated"}
+
+@api_router.post("/user/settings/rules")
+async def update_user_rules(data: UserRulesUpdate, current_user: dict = Depends(get_current_user)):
+    """Update user AI rules"""
+    await db.user_settings.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": {"rules": data.rules, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"message": "Rules updated"}
+
+@api_router.post("/user/settings/home-assistant")
+async def connect_home_assistant(config: HomeAssistantConfig, current_user: dict = Depends(get_current_user)):
+    """Connect Home Assistant for smart home control"""
+    # Test connection first
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config.url}/api/",
+                headers={"Authorization": f"Bearer {config.access_token}"},
+                timeout=10
+            )
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Could not connect to Home Assistant")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Connection failed: {str(e)}")
+    
+    # Save config
+    await db.user_settings.update_one(
+        {"user_id": current_user["id"]},
+        {"$set": {
+            "home_assistant_url": config.url,
+            "home_assistant_token": config.access_token,
+            "home_assistant_connected": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"message": "Home Assistant connected"}
+
+@api_router.get("/user/settings/home-assistant/devices")
+async def get_home_assistant_devices(current_user: dict = Depends(get_current_user)):
+    """Get available Home Assistant devices"""
+    settings = await db.user_settings.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if not settings or not settings.get("home_assistant_connected"):
+        raise HTTPException(status_code=400, detail="Home Assistant not connected")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings['home_assistant_url']}/api/states",
+                headers={"Authorization": f"Bearer {settings['home_assistant_token']}"},
+                timeout=10
+            )
+            devices = response.json()
+            # Filter to useful devices
+            filtered = [d for d in devices if d["entity_id"].startswith(("light.", "switch.", "media_player.", "climate."))]
+            return {"devices": filtered}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get devices: {str(e)}")
+
+@api_router.post("/user/credits/topup")
+async def request_credit_topup(current_user: dict = Depends(get_current_user)):
+    """Request credit top-up (redirects to payment)"""
+    # This would integrate with Stripe for credit purchases
+    return {"message": "Redirect to payment", "redirect": "/subscription"}
+
+@api_router.get("/user/data/export")
+async def export_user_data(current_user: dict = Depends(get_current_user)):
+    """Export all user data"""
+    contacts = await db.contacts.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    memories = await db.memories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    conversations = await db.conversations.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    settings = await db.user_settings.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    
+    return {
+        "contacts": contacts,
+        "memories": memories,
+        "conversations": conversations,
+        "settings": settings
+    }
+
+@api_router.delete("/user/account")
+async def delete_user_account(current_user: dict = Depends(get_current_user)):
+    """Delete user account and all data"""
+    user_id = current_user["id"]
+    await db.contacts.delete_many({"user_id": user_id})
+    await db.memories.delete_many({"user_id": user_id})
+    await db.conversations.delete_many({"user_id": user_id})
+    await db.uploads.delete_many({"user_id": user_id})
+    await db.user_settings.delete_many({"user_id": user_id})
+    await db.users.delete_one({"id": user_id})
+    
+    return {"message": "Account deleted"}
 
 @api_router.get("/invite/{link_id}")
 async def validate_magic_link(link_id: str):

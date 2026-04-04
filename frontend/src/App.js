@@ -827,6 +827,7 @@ const ChatView = () => {
   const messagesEndRef = React.useRef(null);
   const fileInputRef = React.useRef(null);
   const cameraInputRef = React.useRef(null);
+  const abortControllerRef = React.useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -999,12 +1000,17 @@ const ChatView = () => {
       }
 
       const token = localStorage.getItem('token');
+      
+      // Create abort controller for this request
+      abortControllerRef.current = new AbortController();
+      
       const res = await axios.post(`${API_URL}/api/chat`, {
         message: userMessage,
         session_id: sessionId,
         image_url: imageUrl
       }, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: abortControllerRef.current.signal
       });
       
       if (!sessionId) {
@@ -1014,10 +1020,23 @@ const ChatView = () => {
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.response }]);
       clearFile();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send message');
-      setMessages(prev => prev.slice(0, -1));
+      if (err.name === 'CanceledError' || err.message === 'canceled') {
+        setMessages(prev => [...prev, { role: 'assistant', content: '[Stopped]' }]);
+      } else {
+        toast.error(err.response?.data?.detail || 'Failed to send message');
+        setMessages(prev => prev.slice(0, -1));
+      }
     } finally {
       setSending(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  // Stop the current response
+  const stopResponse = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      toast.info('Response stopped');
     }
   };
 
@@ -1263,14 +1282,20 @@ const ChatView = () => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type or speak..."
-          disabled={sending}
+          disabled={false}
           data-testid="chat-input"
         />
         
-        {/* Send button with up arrow */}
-        <button type="submit" disabled={sending || (!input.trim() && !selectedFile)} data-testid="send-message-btn">
-          <ArrowUp size={20} />
-        </button>
+        {/* Stop or Send button */}
+        {sending ? (
+          <button type="button" onClick={stopResponse} className="stop-btn" data-testid="stop-btn">
+            <X size={20} />
+          </button>
+        ) : (
+          <button type="submit" disabled={!input.trim() && !selectedFile} data-testid="send-message-btn">
+            <ArrowUp size={20} />
+          </button>
+        )}
       </form>
     </div>
   );
@@ -2046,6 +2071,456 @@ const SubscriptionSuccess = () => {
   );
 };
 
+// User Settings View
+const UserSettingsView = () => {
+  const { user } = useContext(AuthContext);
+  const [settings, setSettings] = useState({
+    rules: [],
+    custom_sms_templates: [],
+    timezone: '',
+    language: 'en',
+    notification_email: true,
+    notification_sms: true,
+    custom_greeting: ''
+  });
+  const [credits, setCredits] = useState(0);
+  const [newRule, setNewRule] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [homeAssistantUrl, setHomeAssistantUrl] = useState('');
+  const [homeAssistantToken, setHomeAssistantToken] = useState('');
+  const [haConnected, setHaConnected] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/user/settings`);
+      setSettings(res.data.settings || {});
+      setCredits(res.data.credits || 0);
+      setHaConnected(res.data.settings?.home_assistant_connected || false);
+    } catch (err) {
+      console.error('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      await axios.post(`${API_URL}/api/user/settings`, settings);
+      toast.success('Settings saved');
+    } catch (err) {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addRule = () => {
+    if (newRule.trim()) {
+      const updatedRules = [...(settings.rules || []), newRule.trim()];
+      setSettings({ ...settings, rules: updatedRules });
+      setNewRule('');
+    }
+  };
+
+  const removeRule = (index) => {
+    const updatedRules = settings.rules.filter((_, i) => i !== index);
+    setSettings({ ...settings, rules: updatedRules });
+  };
+
+  const connectHomeAssistant = async () => {
+    if (!homeAssistantUrl || !homeAssistantToken) {
+      toast.error('Please enter URL and token');
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/user/settings/home-assistant`, {
+        url: homeAssistantUrl,
+        access_token: homeAssistantToken
+      });
+      toast.success('Home Assistant connected');
+      setHaConnected(true);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to connect');
+    }
+  };
+
+  const exportData = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/user/data/export`);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'chronicle-data.json';
+      a.click();
+      toast.success('Data exported');
+    } catch (err) {
+      toast.error('Failed to export data');
+    }
+  };
+
+  if (loading) return <div className="loading">Loading...</div>;
+
+  return (
+    <div className="settings-view" data-testid="settings-view">
+      <div className="view-header">
+        <h2><Settings size={24} /> Settings</h2>
+      </div>
+
+      <div className="settings-section">
+        <h3>Credits</h3>
+        <div className="credits-display">
+          <span className="credits-amount">{credits}</span>
+          <span className="credits-label">credits remaining</span>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>AI Rules</h3>
+        <p className="section-desc">Set rules for how Chronicle responds to you</p>
+        <div className="rules-list">
+          {(settings.rules || []).map((rule, index) => (
+            <div key={index} className="rule-item">
+              <span>{index + 1}. {rule}</span>
+              <button onClick={() => removeRule(index)} className="remove-btn">
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="add-rule">
+          <input
+            type="text"
+            value={newRule}
+            onChange={(e) => setNewRule(e.target.value)}
+            placeholder="e.g., Keep replies short unless told otherwise"
+            onKeyDown={(e) => e.key === 'Enter' && addRule()}
+          />
+          <button onClick={addRule} className="add-btn">
+            <Plus size={20} />
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>Custom Greeting</h3>
+        <input
+          type="text"
+          value={settings.custom_greeting || ''}
+          onChange={(e) => setSettings({ ...settings, custom_greeting: e.target.value })}
+          placeholder="e.g., Hey boss!"
+        />
+      </div>
+
+      <div className="settings-section">
+        <h3>Notifications</h3>
+        <label className="toggle-setting">
+          <input
+            type="checkbox"
+            checked={settings.notification_email}
+            onChange={(e) => setSettings({ ...settings, notification_email: e.target.checked })}
+          />
+          Email notifications
+        </label>
+        <label className="toggle-setting">
+          <input
+            type="checkbox"
+            checked={settings.notification_sms}
+            onChange={(e) => setSettings({ ...settings, notification_sms: e.target.checked })}
+          />
+          SMS notifications
+        </label>
+      </div>
+
+      <div className="settings-section">
+        <h3>Smart Home (Home Assistant)</h3>
+        {haConnected ? (
+          <div className="ha-connected">
+            <CheckCircle size={20} /> Connected
+          </div>
+        ) : (
+          <div className="ha-connect">
+            <input
+              type="text"
+              value={homeAssistantUrl}
+              onChange={(e) => setHomeAssistantUrl(e.target.value)}
+              placeholder="http://homeassistant.local:8123"
+            />
+            <input
+              type="password"
+              value={homeAssistantToken}
+              onChange={(e) => setHomeAssistantToken(e.target.value)}
+              placeholder="Long-lived access token"
+            />
+            <button onClick={connectHomeAssistant}>Connect</button>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <h3>Data</h3>
+        <button onClick={exportData} className="export-btn">
+          <Download size={20} /> Export My Data
+        </button>
+      </div>
+
+      <div className="settings-actions">
+        <button onClick={saveSettings} disabled={saving} className="save-btn">
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Owner Admin View
+const OwnerAdminView = () => {
+  const [stats, setStats] = useState({ total_users: 0, active_users: 0, total_conversations: 0 });
+  const [users, setUsers] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPartnerEmail, setNewPartnerEmail] = useState('');
+  const [creditAmount, setCreditAmount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboard();
+    fetchPartners();
+  }, []);
+
+  const fetchDashboard = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/dashboard`);
+      setStats(res.data);
+      setUsers(res.data.recent_users || []);
+    } catch (err) {
+      toast.error('Failed to load admin data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchUsers = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/users?search=${searchQuery}`);
+      setUsers(res.data.users || []);
+    } catch (err) {
+      toast.error('Search failed');
+    }
+  };
+
+  const fetchPartners = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/partners`);
+      setPartners(res.data.partners || []);
+    } catch (err) {
+      console.error('Failed to load partners');
+    }
+  };
+
+  const viewUser = async (userId) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/user/${userId}`);
+      setSelectedUser(res.data);
+    } catch (err) {
+      toast.error('Failed to load user');
+    }
+  };
+
+  const updateCredits = async (userId) => {
+    try {
+      await axios.post(`${API_URL}/api/admin/user/${userId}/credits`, { credits: creditAmount });
+      toast.success('Credits updated');
+      fetchDashboard();
+      setCreditAmount(0);
+    } catch (err) {
+      toast.error('Failed to update credits');
+    }
+  };
+
+  const revokeAccess = async (userId) => {
+    try {
+      await axios.post(`${API_URL}/api/admin/revoke-access/${userId}`);
+      toast.success('Access revoked');
+      fetchDashboard();
+    } catch (err) {
+      toast.error('Failed to revoke access');
+    }
+  };
+
+  const restoreAccess = async (userId) => {
+    try {
+      await axios.post(`${API_URL}/api/admin/restore-access/${userId}`);
+      toast.success('Access restored');
+      fetchDashboard();
+    } catch (err) {
+      toast.error('Failed to restore access');
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm('Delete this user and all their data? This cannot be undone.')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/user/${userId}`);
+      toast.success('User deleted');
+      setSelectedUser(null);
+      fetchDashboard();
+    } catch (err) {
+      toast.error('Failed to delete user');
+    }
+  };
+
+  const addPartner = async () => {
+    if (!newPartnerEmail) return;
+    try {
+      await axios.post(`${API_URL}/api/admin/partner`, { email: newPartnerEmail });
+      toast.success('Partner added');
+      setNewPartnerEmail('');
+      fetchPartners();
+    } catch (err) {
+      toast.error('Failed to add partner');
+    }
+  };
+
+  const removePartner = async (email) => {
+    try {
+      await axios.delete(`${API_URL}/api/admin/partner/${email}`);
+      toast.success('Partner removed');
+      fetchPartners();
+    } catch (err) {
+      toast.error('Failed to remove partner');
+    }
+  };
+
+  if (loading) return <div className="loading">Loading...</div>;
+
+  return (
+    <div className="admin-view" data-testid="admin-view">
+      <div className="view-header">
+        <h2><Shield size={24} /> Admin Panel</h2>
+      </div>
+
+      <div className="admin-stats">
+        <div className="stat-card">
+          <span className="stat-number">{stats.total_users}</span>
+          <span className="stat-label">Total Users</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.active_users}</span>
+          <span className="stat-label">Active Users</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-number">{stats.total_conversations}</span>
+          <span className="stat-label">Conversations</span>
+        </div>
+      </div>
+
+      <div className="admin-section">
+        <h3>Search Users</h3>
+        <div className="search-bar">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or email..."
+            onKeyDown={(e) => e.key === 'Enter' && searchUsers()}
+          />
+          <button onClick={searchUsers}>Search</button>
+        </div>
+      </div>
+
+      <div className="admin-section">
+        <h3>Users</h3>
+        <div className="users-list">
+          {users.map((u) => (
+            <div key={u.id} className={`user-item ${u.access_revoked ? 'revoked' : ''}`} onClick={() => viewUser(u.id)}>
+              <div className="user-info-admin">
+                <span className="user-name">{u.name}</span>
+                <span className="user-email">{u.email}</span>
+              </div>
+              <div className="user-credits">
+                <span>{u.credits || 0} credits</span>
+              </div>
+              {u.access_revoked && <span className="revoked-badge">Revoked</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selectedUser && (
+        <div className="user-detail-modal">
+          <div className="modal-content">
+            <button className="close-modal" onClick={() => setSelectedUser(null)}>
+              <X size={24} />
+            </button>
+            <h3>{selectedUser.user.name}</h3>
+            <p>{selectedUser.user.email}</p>
+            <div className="user-stats-detail">
+              <span>Conversations: {selectedUser.stats.conversations}</span>
+              <span>Contacts: {selectedUser.stats.contacts}</span>
+              <span>Memories: {selectedUser.stats.memories}</span>
+              <span>Credits: {selectedUser.user.credits || 0}</span>
+            </div>
+            <div className="credit-adjustment">
+              <input
+                type="number"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                placeholder="Credits (+/-)"
+              />
+              <button onClick={() => updateCredits(selectedUser.user.id)}>Update Credits</button>
+            </div>
+            <div className="user-actions">
+              {selectedUser.user.access_revoked ? (
+                <button onClick={() => restoreAccess(selectedUser.user.id)} className="restore-btn">
+                  <UserCheck size={20} /> Restore Access
+                </button>
+              ) : (
+                <button onClick={() => revokeAccess(selectedUser.user.id)} className="revoke-btn">
+                  <UserX size={20} /> Revoke Access
+                </button>
+              )}
+              <button onClick={() => deleteUser(selectedUser.user.id)} className="delete-btn">
+                <Trash2 size={20} /> Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="admin-section">
+        <h3>Admin Partners</h3>
+        <div className="partners-list">
+          {partners.map((p) => (
+            <div key={p.email} className="partner-item">
+              <span>{p.email}</span>
+              <button onClick={() => removePartner(p.email)} className="remove-btn">
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="add-partner">
+          <input
+            type="email"
+            value={newPartnerEmail}
+            onChange={(e) => setNewPartnerEmail(e.target.value)}
+            placeholder="Partner email address"
+          />
+          <button onClick={addPartner}>Add Partner</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main Dashboard
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('chat');
@@ -2084,6 +2559,10 @@ const Dashboard = () => {
         return <PhoneView />;
       case 'subscription':
         return <SubscriptionView />;
+      case 'settings':
+        return <UserSettingsView />;
+      case 'admin':
+        return <OwnerAdminView />;
       default:
         return <ChatView />;
     }
@@ -2146,6 +2625,24 @@ const Dashboard = () => {
             <CreditCard size={20} />
             Subscription
           </button>
+          <button
+            className={activeView === 'settings' ? 'active' : ''}
+            onClick={() => { setActiveView('settings'); setSidebarOpen(false); }}
+            data-testid="nav-settings"
+          >
+            <Settings size={20} />
+            Settings
+          </button>
+          {user?.email === 'sailingwaves@gmail.com' && (
+            <button
+              className={activeView === 'admin' ? 'active' : ''}
+              onClick={() => { setActiveView('admin'); setSidebarOpen(false); }}
+              data-testid="nav-admin"
+            >
+              <Shield size={20} />
+              Admin
+            </button>
+          )}
         </nav>
 
         <div className="sidebar-footer">
