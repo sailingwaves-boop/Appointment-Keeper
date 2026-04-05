@@ -2120,17 +2120,31 @@ const UserSettingsView = () => {
     }
   };
 
-  const addRule = () => {
+  const addRule = async () => {
     if (newRule.trim()) {
       const updatedRules = [...(settings.rules || []), newRule.trim()];
       setSettings({ ...settings, rules: updatedRules });
       setNewRule('');
+      // Auto-save rules
+      try {
+        await axios.post(`${API_URL}/api/user/settings/rules`, { rules: updatedRules });
+        toast.success('Rule added');
+      } catch (err) {
+        toast.error('Failed to save rule');
+      }
     }
   };
 
-  const removeRule = (index) => {
+  const removeRule = async (index) => {
     const updatedRules = settings.rules.filter((_, i) => i !== index);
     setSettings({ ...settings, rules: updatedRules });
+    // Auto-save rules
+    try {
+      await axios.post(`${API_URL}/api/user/settings/rules`, { rules: updatedRules });
+      toast.success('Rule removed');
+    } catch (err) {
+      toast.error('Failed to save');
+    }
   };
 
   const connectHomeAssistant = async () => {

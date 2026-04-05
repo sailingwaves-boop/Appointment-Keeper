@@ -628,12 +628,17 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     if not current_user.get("disclosure_accepted", False):
         raise HTTPException(status_code=403, detail="You must accept the disclosure before using Chronicle")
     
-    # Check if user has active subscription or trial
-    if not current_user.get("is_subscribed", False) and not is_trial_active(current_user):
-        raise HTTPException(
-            status_code=403, 
-            detail="Your free trial has ended. Please subscribe to continue using Chronicle. Your memories and data are preserved."
-        )
+    # Skip subscription check for admin
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    
+    if not is_admin and not partner:
+        # Check if user has active subscription or trial
+        if not current_user.get("is_subscribed", False) and not is_trial_active(current_user):
+            raise HTTPException(
+                status_code=403, 
+                detail="Your free trial has ended. Please subscribe to continue using Chronicle. Your memories and data are preserved."
+            )
     
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
