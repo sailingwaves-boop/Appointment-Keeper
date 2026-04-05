@@ -24,6 +24,7 @@ import base64
 import asyncio
 import stripe
 import tempfile
+import anthropic
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -636,30 +637,35 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
-    session_key = f"{user_id}_{session_id}"
     
-    # Get or create chat instance
-    if session_key not in chat_sessions:
-        # Load user's memory for context
-        memories = await db.memories.find({"user_id": user_id}, {"_id": 0}).to_list(100)
-        memory_context = ""
-        if memories:
-            memory_context = "\n\nUser's stored information:\n"
-            for mem in memories:
-                memory_context += f"- {mem['key']}: {mem['value']}\n"
-        
-        # Load user's contacts
-        contacts = await db.contacts.find({"user_id": user_id}, {"_id": 0}).to_list(100)
-        contacts_context = ""
-        if contacts:
-            contacts_context = "\n\nUser's contacts:\n"
-            for contact in contacts:
-                contacts_context += f"- {contact['name']}: {contact['phone']}"
-                if contact.get('email'):
-                    contacts_context += f" ({contact['email']})"
-                contacts_context += "\n"
-        
-        system_message = f"""You are Chronicle, a highly capable personal assistant with persistent memory. You help the user with anything they need - coding, planning, problem-solving, managing their business, and more.
+    # Load user's memory for context
+    memories = await db.memories.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    memory_context = ""
+    if memories:
+        memory_context = "\n\nUser's stored information:\n"
+        for mem in memories:
+            memory_context += f"- {mem['key']}: {mem['value']}\n"
+    
+    # Load user's contacts
+    contacts = await db.contacts.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    contacts_context = ""
+    if contacts:
+        contacts_context = "\n\nUser's contacts:\n"
+        for contact in contacts:
+            contacts_context += f"- {contact['name']}: {contact['phone']}"
+            if contact.get('email'):
+                contacts_context += f" ({contact['email']})"
+            contacts_context += "\n"
+    
+    # Load user's custom rules
+    user_settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+    rules_context = ""
+    if user_settings and user_settings.get("rules"):
+        rules_context = "\n\nUser's rules for you:\n"
+        for rule in user_settings["rules"]:
+            rules_context += f"- {rule}\n"
+    
+    system_message = f"""You are Chronicle, a highly capable personal assistant with persistent memory. You help the user with anything they need - coding, planning, problem-solving, managing their business, and more.
 
 You remember everything the user tells you. If they share personal information, preferences, or important details, acknowledge that you'll remember it.
 
@@ -673,43 +679,67 @@ You are also connected to the user's phone system and can help them:
 When the user asks you to text or call someone, confirm you'll do it and ask for any missing details (like the message content or phone number if not in contacts).
 
 Be direct, helpful, and efficient. Don't be overly formal or use unnecessary pleasantries.
-{memory_context}{contacts_context}
+{rules_context}{memory_context}{contacts_context}
 User's name: {current_user['name']}"""
 
-        chat_sessions[session_key] = LlmChat(
-            api_key=os.environ.get('EMERGENT_LLM_KEY'),
-            session_id=session_key,
-            system_message=system_message
-        ).with_model("anthropic", "claude-sonnet-4-6")
+    # Get conversation history for this session
+    history = await db.conversations.find(
+        {"user_id": user_id, "session_id": session_id},
+        {"_id": 0}
+    ).sort("timestamp", 1).limit(20).to_list(20)
     
-    chat_instance = chat_sessions[session_key]
+    # Build messages array for Anthropic
+    messages = []
+    for h in history:
+        messages.append({"role": "user", "content": h["user_message"]})
+        messages.append({"role": "assistant", "content": h["assistant_response"]})
     
-    # Send message and get response
+    # Add current message with optional image
+    if request.image_url:
+        logger.info(f"Processing image_url: {request.image_url}")
+        try:
+            file_id = request.image_url.split('/')[-1]
+            file_doc = await db.uploads.find_one({"id": file_id}, {"_id": 0})
+            if file_doc and file_doc.get("data"):
+                logger.info(f"Found image, sending to Claude")
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": file_doc.get("content_type", "image/jpeg"),
+                                "data": file_doc["data"]
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": request.message
+                        }
+                    ]
+                })
+            else:
+                messages.append({"role": "user", "content": request.message})
+        except Exception as img_err:
+            logger.error(f"Image fetch error: {img_err}")
+            messages.append({"role": "user", "content": request.message})
+    else:
+        logger.info("No image_url provided")
+        messages.append({"role": "user", "content": request.message})
+    
+    # Call Anthropic API directly with user's key
     try:
-        # Build message with optional image
-        if request.image_url:
-            logger.info(f"Processing image_url: {request.image_url}")
-            # Fetch the image and convert to base64
-            try:
-                file_id = request.image_url.split('/')[-1]
-                logger.info(f"Looking for file_id: {file_id}")
-                file_doc = await db.uploads.find_one({"id": file_id}, {"_id": 0})
-                if file_doc and file_doc.get("data"):
-                    logger.info(f"Found image, size: {len(file_doc['data'])} chars, type: {file_doc.get('content_type')}")
-                    image_content = ImageContent(image_base64=file_doc["data"])
-                    user_message = UserMessage(text=request.message, file_contents=[image_content])
-                    logger.info("Created UserMessage with image")
-                else:
-                    logger.warning(f"Image not found in database for id: {file_id}")
-                    user_message = UserMessage(text=request.message)
-            except Exception as img_err:
-                logger.error(f"Image fetch error: {img_err}")
-                user_message = UserMessage(text=request.message)
-        else:
-            logger.info("No image_url provided")
-            user_message = UserMessage(text=request.message)
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
         
-        response_text = await chat_instance.send_message(user_message)
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=8192,
+            system=system_message,
+            messages=messages
+        )
+        
+        response_text = response.content[0].text
         
         # Save conversation to database
         now = datetime.now(timezone.utc).isoformat()
@@ -726,7 +756,6 @@ User's name: {current_user['name']}"""
         # Check if user shared something to remember
         message_lower = request.message.lower()
         if any(phrase in message_lower for phrase in ["remember", "my name is", "i am", "i'm", "my email", "my phone", "my address", "i like", "i prefer", "i work"]):
-            # Extract and store memory (simplified - in production, use NLP)
             memory_doc = {
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
@@ -740,19 +769,12 @@ User's name: {current_user['name']}"""
         
         return ChatResponse(response=response_text, session_id=session_id)
         
+    except anthropic.APIError as e:
+        logger.error(f"Anthropic API error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Chronicle is having trouble connecting. Please try again.")
     except Exception as e:
-        error_msg = str(e).lower()
         logger.error(f"Chat error: {str(e)}")
-        
-        # Handle specific error messages
-        if "credit" in error_msg or "balance" in error_msg or "insufficient" in error_msg:
-            raise HTTPException(status_code=402, detail="AI service temporarily unavailable. Please try again later.")
-        elif "rate limit" in error_msg:
-            raise HTTPException(status_code=429, detail="Too many requests. Please wait a moment and try again.")
-        elif "too long" in error_msg or "token" in error_msg:
-            raise HTTPException(status_code=400, detail="Message too long. Please try a shorter message.")
-        else:
-            raise HTTPException(status_code=500, detail="Chronicle is having trouble right now. Please try again.")
+        raise HTTPException(status_code=500, detail="Chronicle is having trouble right now. Please try again.")
 
 @api_router.get("/chat/history")
 async def get_chat_history(session_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
