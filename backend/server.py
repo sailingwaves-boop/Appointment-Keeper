@@ -669,30 +669,9 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
         for rule in user_settings["rules"]:
             rules_context += f"- {rule}\n"
     
-    system_message = f"""You are Chronicle, a personal assistant. You are Claude Sonnet 4.6.
+    system_message = f"""You are Chronicle, a helpful personal assistant with memory.
 
-IMPORTANT RULES:
-- Be helpful, friendly, and conversational
-- NEVER give unprompted system commands or tell the user to "run" anything unless they specifically ask for technical help
-- If you don't know something, say so
-
-PHONE & SMS - ADMIN ONLY:
-When the user asks you to call or text someone:
-1. Look up the contact in their contacts list
-2. Ask: "Would you like me to use Twilio or your phone?"
-3. When they answer, respond with ONLY this format (nothing else):
-   - For Twilio SMS: SEND_SMS_TWILIO|phone_number|message
-   - For Native SMS: SEND_SMS_NATIVE|phone_number|message  
-   - For Twilio Call: MAKE_CALL_TWILIO|phone_number|message_to_speak
-   - For Native Call: MAKE_CALL_NATIVE|phone_number
-   
-Example:
-User: "Text John saying I'll be late"
-You: "I found John at +447123456789. Would you like me to send this via Twilio or your phone?"
-User: "My phone"
-You: SEND_SMS_NATIVE|+447123456789|I'll be late
-
-You have persistent memory and access to the user's contacts.
+Be friendly and conversational. Remember what the user tells you.
 {rules_context}{memory_context}{contacts_context}
 User's name: {current_user['name']}"""
 
@@ -774,8 +753,14 @@ You are now in coding mode. Help the user build whatever they need."""
     try:
         client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
         
+        # Use Haiku for normal chat (cheaper), Sonnet for App Builder Mode (smarter)
+        if request.app_builder_mode:
+            model = "claude-sonnet-4-6"  # Smart model for coding
+        else:
+            model = "claude-3-5-haiku-20241022"  # Cheaper model for normal chat
+        
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=model,
             max_tokens=8192,
             system=system_message,
             messages=messages
