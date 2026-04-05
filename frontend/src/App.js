@@ -1066,7 +1066,12 @@ const ChatView = () => {
         setSessionId(res.data.session_id);
       }
       
-      setMessages(prev => [...prev, { role: 'assistant', content: res.data.response }]);
+      const aiResponse = res.data.response;
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      
+      // Check for action tags and execute them
+      await executeActionsFromResponse(aiResponse);
+      
       clearFile();
     } catch (err) {
       if (err.name === 'CanceledError' || err.message === 'canceled') {
@@ -1564,6 +1569,7 @@ const PhoneView = () => {
   const [smsHistory, setSmsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isAdminOrPartner, setIsAdminOrPartner] = useState(false);
   
   // SMS form
   const [smsPhone, setSmsPhone] = useState('');
@@ -1584,16 +1590,18 @@ const PhoneView = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [contactsRes, subRes, callsRes, smsRes] = await Promise.all([
+      const [contactsRes, subRes, callsRes, smsRes, adminRes] = await Promise.all([
         axios.get(`${API_URL}/api/contacts`, { headers }),
         axios.get(`${API_URL}/api/subscription/status`, { headers }),
         axios.get(`${API_URL}/api/call/history`, { headers }).catch(() => ({ data: { calls: [] } })),
-        axios.get(`${API_URL}/api/sms/history`, { headers }).catch(() => ({ data: { messages: [] } }))
+        axios.get(`${API_URL}/api/sms/history`, { headers }).catch(() => ({ data: { messages: [] } })),
+        axios.get(`${API_URL}/api/user/is-admin`, { headers }).catch(() => ({ data: { is_admin: false } }))
       ]);
       setContacts(contactsRes.data || []);
       setSubscription(subRes.data || {});
       setCallHistory(callsRes.data?.calls || []);
       setSmsHistory(smsRes.data?.messages || []);
+      setIsAdminOrPartner(adminRes.data?.is_admin || adminRes.data?.is_partner || false);
     } catch (err) {
       console.error('Failed to load phone data:', err);
     } finally {
@@ -1663,7 +1671,8 @@ const PhoneView = () => {
     }
   };
 
-  const canUsePhoneFeatures = subscription?.plan && !subscription?.plan.includes('starter');
+  // Admin/partner can always use phone features
+  const canUsePhoneFeatures = isAdminOrPartner || (subscription?.plan && !subscription?.plan.includes('starter'));
 
   if (loading) {
     return <div className="loading">Loading...</div>;

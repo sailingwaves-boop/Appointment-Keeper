@@ -1190,6 +1190,16 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
         "is_subscribed": user.get("is_subscribed", False)
     }
 
+@api_router.get("/user/is-admin")
+async def check_is_admin(current_user: dict = Depends(get_current_user)):
+    """Check if user is admin or partner"""
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    return {
+        "is_admin": is_admin,
+        "is_partner": partner is not None
+    }
+
 @api_router.post("/user/settings")
 async def update_user_settings(settings: UserSettings, current_user: dict = Depends(get_current_user)):
     """Update user settings"""
