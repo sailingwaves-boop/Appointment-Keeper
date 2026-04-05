@@ -1263,6 +1263,113 @@ async def delete_user_account(current_user: dict = Depends(get_current_user)):
     
     return {"message": "Account deleted"}
 
+@api_router.delete("/user/chats")
+async def delete_user_chats(current_user: dict = Depends(get_current_user)):
+    """Delete all user's chat history"""
+    await db.conversations.delete_many({"user_id": current_user["id"]})
+    return {"message": "Chat history deleted"}
+
+@api_router.delete("/user/memories")
+async def delete_user_memories(current_user: dict = Depends(get_current_user)):
+    """Delete all user's memories"""
+    await db.memories.delete_many({"user_id": current_user["id"]})
+    return {"message": "Memories deleted"}
+
+# ============== PHONE & SMS ROUTES ==============
+
+class SendSMSRequest(BaseModel):
+    to: str
+    message: str
+    use_native: Optional[bool] = False
+
+class PlaceCallRequest(BaseModel):
+    to: str
+    message: Optional[str] = None
+    voice_id: Optional[str] = None
+    use_native: Optional[bool] = False
+
+@api_router.post("/sms/send")
+async def send_sms(data: SendSMSRequest, current_user: dict = Depends(get_current_user)):
+    """Send SMS via Twilio or return native SMS link"""
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    
+    if data.use_native and (is_admin or partner):
+        # Return deep link for native SMS
+        encoded_message = data.message.replace(' ', '%20')
+        return {
+            "native": True,
+            "link": f"sms:{data.to}?body={encoded_message}"
+        }
+    
+    # Send via Twilio
+    try:
+        twilio_client = TwilioClient(
+            os.environ.get('TWILIO_ACCOUNT_SID'),
+            os.environ.get('TWILIO_AUTH_TOKEN')
+        )
+        message = twilio_client.messages.create(
+            body=data.message,
+            from_=os.environ.get('TWILIO_PHONE_NUMBER'),
+            to=data.to
+        )
+        return {"success": True, "sid": message.sid}
+    except Exception as e:
+        logger.error(f"SMS error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send SMS")
+
+@api_router.post("/call/place")
+async def place_call(data: PlaceCallRequest, current_user: dict = Depends(get_current_user)):
+    """Place a call via Twilio with ElevenLabs voice or return native call link"""
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    
+    if data.use_native and (is_admin or partner):
+        # Return deep link for native phone call
+        return {
+            "native": True,
+            "link": f"tel:{data.to}"
+        }
+    
+    # Place call via Twilio
+    try:
+        twilio_client = TwilioClient(
+            os.environ.get('TWILIO_ACCOUNT_SID'),
+            os.environ.get('TWILIO_AUTH_TOKEN')
+        )
+        
+        # If message provided, use TwiML to speak it
+        if data.message:
+            twiml = f'<Response><Say voice="alice">{data.message}</Say></Response>'
+            call = twilio_client.calls.create(
+                twiml=twiml,
+                from_=os.environ.get('TWILIO_PHONE_NUMBER'),
+                to=data.to
+            )
+        else:
+            # Just connect the call
+            call = twilio_client.calls.create(
+                url="http://demo.twilio.com/docs/voice.xml",
+                from_=os.environ.get('TWILIO_PHONE_NUMBER'),
+                to=data.to
+            )
+        return {"success": True, "sid": call.sid}
+    except Exception as e:
+        logger.error(f"Call error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to place call")
+
+@api_router.get("/voices")
+async def get_available_voices(current_user: dict = Depends(get_current_user)):
+    """Get available ElevenLabs voices"""
+    try:
+        eleven_client = ElevenLabs(api_key=os.environ.get('ELEVENLABS_API_KEY'))
+        voices = eleven_client.voices.get_all()
+        voice_list = [{"id": v.voice_id, "name": v.name} for v in voices.voices]
+        return {"voices": voice_list}
+    except Exception as e:
+        logger.error(f"Voices error: {str(e)}")
+        return {"voices": []}
+
 @api_router.get("/invite/{link_id}")
 async def validate_magic_link(link_id: str):
     """Validate a magic link"""

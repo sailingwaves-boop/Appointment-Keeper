@@ -965,7 +965,7 @@ const ChatView = () => {
     toast.info(selectedFile ? 'Sending with image...' : 'Sending...');
 
     // Get the message text - use default only if sending just an image
-    const userMessage = input.trim() ? input.trim() : (selectedFile ? "What do you see in this image?" : "");
+    const userMessage = input.trim() ? input.trim() : (selectedFile ? "" : "");
     setInput(''); // Clear input immediately
     
     // Create message with optional image
@@ -2081,7 +2081,8 @@ const UserSettingsView = () => {
     language: 'en',
     notification_email: true,
     notification_sms: true,
-    custom_greeting: ''
+    custom_greeting: '',
+    selected_voice: ''
   });
   const [credits, setCredits] = useState(0);
   const [newRule, setNewRule] = useState('');
@@ -2090,10 +2091,21 @@ const UserSettingsView = () => {
   const [homeAssistantUrl, setHomeAssistantUrl] = useState('');
   const [homeAssistantToken, setHomeAssistantToken] = useState('');
   const [haConnected, setHaConnected] = useState(false);
+  const [voices, setVoices] = useState([]);
 
   useEffect(() => {
     fetchSettings();
+    fetchVoices();
   }, []);
+
+  const fetchVoices = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/voices`);
+      setVoices(res.data.voices || []);
+    } catch (err) {
+      console.error('Failed to load voices');
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -2253,6 +2265,21 @@ const UserSettingsView = () => {
       </div>
 
       <div className="settings-section">
+        <h3>Voice for Calls</h3>
+        <p className="section-desc">Select a voice for when Chronicle makes calls on your behalf</p>
+        <select
+          value={settings.selected_voice || ''}
+          onChange={(e) => setSettings({ ...settings, selected_voice: e.target.value })}
+          className="voice-select"
+        >
+          <option value="">Default voice</option>
+          {voices.map((voice) => (
+            <option key={voice.id} value={voice.id}>{voice.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="settings-section">
         <h3>Smart Home (Home Assistant)</h3>
         {haConnected ? (
           <div className="ha-connected">
@@ -2282,6 +2309,30 @@ const UserSettingsView = () => {
         <button onClick={exportData} className="export-btn">
           <Download size={20} /> Export My Data
         </button>
+        <button onClick={async () => {
+          if (window.confirm('Delete all your chat history? This cannot be undone.')) {
+            try {
+              await axios.delete(`${API_URL}/api/user/chats`);
+              toast.success('Chat history deleted');
+            } catch (err) {
+              toast.error('Failed to delete chats');
+            }
+          }
+        }} className="delete-data-btn">
+          <Trash2 size={20} /> Delete All Chats
+        </button>
+        <button onClick={async () => {
+          if (window.confirm('Delete all your memories? Chronicle will forget everything about you. This cannot be undone.')) {
+            try {
+              await axios.delete(`${API_URL}/api/user/memories`);
+              toast.success('Memories deleted');
+            } catch (err) {
+              toast.error('Failed to delete memories');
+            }
+          }
+        }} className="delete-data-btn">
+          <Trash2 size={20} /> Delete All Memories
+        </button>
       </div>
 
       <div className="settings-actions">
@@ -2303,6 +2354,9 @@ const OwnerAdminView = () => {
   const [newPartnerEmail, setNewPartnerEmail] = useState('');
   const [creditAmount, setCreditAmount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [smsMessage, setSmsMessage] = useState('');
+  const [showPhonePanel, setShowPhonePanel] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -2529,6 +2583,65 @@ const OwnerAdminView = () => {
             placeholder="Partner email address"
           />
           <button onClick={addPartner}>Add Partner</button>
+        </div>
+      </div>
+
+      <div className="admin-section">
+        <h3>Phone & SMS</h3>
+        <p className="section-desc">Send SMS or place calls (choose Twilio or your phone)</p>
+        <div className="phone-controls">
+          <input
+            type="text"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            placeholder="Phone number (+44...)"
+          />
+          <input
+            type="text"
+            value={smsMessage}
+            onChange={(e) => setSmsMessage(e.target.value)}
+            placeholder="Message (for SMS)"
+          />
+          <div className="phone-buttons">
+            <button onClick={async () => {
+              if (!phoneNumber) { toast.error('Enter phone number'); return; }
+              if (!smsMessage) { toast.error('Enter message'); return; }
+              try {
+                const res = await axios.post(`${API_URL}/api/sms/send`, { to: phoneNumber, message: smsMessage, use_native: false });
+                toast.success('SMS sent via Twilio');
+              } catch (err) { toast.error('Failed to send SMS'); }
+            }} className="twilio-btn">
+              SMS via Twilio
+            </button>
+            <button onClick={async () => {
+              if (!phoneNumber) { toast.error('Enter phone number'); return; }
+              if (!smsMessage) { toast.error('Enter message'); return; }
+              const res = await axios.post(`${API_URL}/api/sms/send`, { to: phoneNumber, message: smsMessage, use_native: true });
+              if (res.data.native) {
+                window.location.href = res.data.link;
+              }
+            }} className="native-btn">
+              SMS via My Phone
+            </button>
+            <button onClick={async () => {
+              if (!phoneNumber) { toast.error('Enter phone number'); return; }
+              try {
+                const res = await axios.post(`${API_URL}/api/call/place`, { to: phoneNumber, use_native: false });
+                toast.success('Call placed via Twilio');
+              } catch (err) { toast.error('Failed to place call'); }
+            }} className="twilio-btn">
+              Call via Twilio
+            </button>
+            <button onClick={async () => {
+              if (!phoneNumber) { toast.error('Enter phone number'); return; }
+              const res = await axios.post(`${API_URL}/api/call/place`, { to: phoneNumber, use_native: true });
+              if (res.data.native) {
+                window.location.href = res.data.link;
+              }
+            }} className="native-btn">
+              Call via My Phone
+            </button>
+          </div>
         </div>
       </div>
     </div>
