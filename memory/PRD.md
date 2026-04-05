@@ -28,15 +28,13 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - [x] Message copy and TTS playback
 - [x] Microphone with 2-second silence auto-stop
 - [x] **App Builder Mode toggle** (switches AI context to coding/development focus)
-
-### In Progress
-- [ ] Native Phone SMS option (send via native SMS app vs Twilio)
-- [ ] Outbound phone calling with ElevenLabs TTS voice
+- [x] **Native Phone SMS** (admin only - opens native SMS app)
+- [x] **Native Phone Call** (admin only - opens native dialer)
 
 ### Future/Backlog
+- [ ] Google Home / Alexa smart home integration (cloud-based, OAuth)
 - [ ] Network Printing via PrintNode API
-- [ ] Smart Home control via Home Assistant API
-- [ ] "Home Mode" toggle for smart home context
+- [ ] ElevenLabs voice for Twilio calls (enhanced TTS)
 
 ## Key Files
 - `/app/backend/server.py` - FastAPI backend with all endpoints
@@ -48,11 +46,19 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - `POST /api/auth/login` - User login
 - `POST /api/auth/google/token` - Google OAuth
 - `POST /api/chat` - Chat with AI (supports `app_builder_mode` flag)
+- `POST /api/sms/send` - Send SMS (Twilio or native)
+- `POST /api/call/place` - Place call (Twilio or native)
 - `GET /api/memory` - Get user memories
 - `GET /api/contacts` - Get contacts
 - `POST /api/trial/setup` - Start trial with card
 - `GET /api/admin/dashboard` - Admin stats
 - `GET /api/user/settings` - User settings
+
+## Admin-Only Features
+The following features are only available to the admin (sailingwaves@gmail.com) or partners added via the admin panel:
+- Native SMS (opens phone's SMS app with pre-filled message)
+- Native Phone Call (opens phone's dialer)
+- Admin Dashboard (user management, credits, partners)
 
 ## Environment Variables (Backend)
 - `MONGO_URL` - MongoDB connection
@@ -72,4 +78,4 @@ cd /app && git pull && cd frontend && npm run build && cp -r build/* /app/backen
 ```
 
 ## Last Updated
-2026-04-05 - Added App Builder Mode toggle
+2026-04-05 - Added App Builder Mode toggle, Native Phone SMS & Call (admin only)
