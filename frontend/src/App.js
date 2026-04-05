@@ -916,15 +916,62 @@ const ChatView = () => {
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
-  // Text-to-speech for AI responses
-  const speakMessage = (text) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-GB';
-      utterance.rate = 1;
-      window.speechSynthesis.speak(utterance);
-    } else {
-      toast.error('Text-to-speech not supported');
+  // Text-to-speech for AI responses using ElevenLabs
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef(null);
+
+  const speakMessage = async (text) => {
+    if (isSpeaking) {
+      // Stop current audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsSpeaking(false);
+      return;
+    }
+
+    setIsSpeaking(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/voice/tts`, null, {
+        params: { text: text.substring(0, 5000) }, // Limit text length
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data.audio) {
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(response.data.audio), c => c.charCodeAt(0))],
+          { type: 'audio/mpeg' }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+        };
+        
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          toast.error('Failed to play audio');
+        };
+        
+        audio.play();
+      }
+    } catch (err) {
+      console.error('TTS error:', err);
+      setIsSpeaking(false);
+      // Fallback to browser TTS
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB';
+        utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        toast.error('Text-to-speech not available');
+      }
     }
   };
 
@@ -2082,6 +2129,117 @@ const SubscriptionSuccess = () => {
   );
 };
 
+// Voice Clone Section Component
+const VoiceCloneSection = ({ onVoiceCloned }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
+  const [sampleText, setSampleText] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  useEffect(() => {
+    fetchSampleText();
+  }, []);
+
+  const fetchSampleText = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/voice/clone/sample-text`);
+      setSampleText(res.data.text);
+      setInstructions(res.data.instructions);
+    } catch (err) {
+      console.error('Failed to fetch sample text');
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await uploadVoiceSample(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      toast.error('Could not access microphone');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const uploadVoiceSample = async (audioBlob) => {
+    setIsCloning(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice_sample.webm');
+
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`${API_URL}/api/voice/clone`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(res.data.message || 'Voice cloned successfully!');
+      if (onVoiceCloned) onVoiceCloned();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to clone voice');
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  return (
+    <div className="settings-section voice-clone-section">
+      <h3><Mic size={20} /> Clone Your Voice</h3>
+      <p className="section-desc">Record your voice to create a personalized AI voice clone</p>
+      
+      {sampleText && (
+        <div className="sample-text-box">
+          <p className="sample-instructions">{instructions}</p>
+          <p className="sample-text">"{sampleText}"</p>
+        </div>
+      )}
+
+      <div className="voice-clone-controls">
+        {isCloning ? (
+          <div className="cloning-status">
+            <div className="spinner"></div>
+            <span>Creating your voice clone...</span>
+          </div>
+        ) : isRecording ? (
+          <button onClick={stopRecording} className="record-btn recording" data-testid="stop-recording-btn">
+            <div className="recording-indicator"></div>
+            Stop Recording
+          </button>
+        ) : (
+          <button onClick={startRecording} className="record-btn" data-testid="start-recording-btn">
+            <Mic size={20} />
+            Start Recording
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // User Settings View
 const UserSettingsView = () => {
   const { user } = useContext(AuthContext);
@@ -2289,6 +2447,8 @@ const UserSettingsView = () => {
           ))}
         </select>
       </div>
+
+      <VoiceCloneSection onVoiceCloned={fetchVoices} />
 
       <div className="settings-section">
         <h3>Smart Home (Home Assistant)</h3>
@@ -2653,6 +2813,99 @@ const OwnerAdminView = () => {
               Call via My Phone
             </button>
           </div>
+        </div>
+      </div>
+
+      <ElevenLabsCallSection phoneNumber={phoneNumber} />
+    </div>
+  );
+};
+
+// ElevenLabs Call Section Component  
+const ElevenLabsCallSection = ({ phoneNumber }) => {
+  const [callMessage, setCallMessage] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState('');
+  const [voices, setVoices] = useState([]);
+  const [calling, setCalling] = useState(false);
+
+  useEffect(() => {
+    fetchVoices();
+  }, []);
+
+  const fetchVoices = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/voices/available`);
+      setVoices(res.data.voices || []);
+    } catch (err) {
+      console.error('Failed to load voices');
+    }
+  };
+
+  const makeCallWithVoice = async () => {
+    if (!phoneNumber) {
+      toast.error('Enter phone number above');
+      return;
+    }
+    if (!callMessage.trim()) {
+      toast.error('Enter message to speak');
+      return;
+    }
+
+    setCalling(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/call/with-voice`, {
+        to_phone: phoneNumber,
+        message: callMessage,
+        voice_id: selectedVoice || null
+      });
+      toast.success('Call initiated with ElevenLabs voice!');
+      setCallMessage('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to make call');
+    } finally {
+      setCalling(false);
+    }
+  };
+
+  return (
+    <div className="admin-section call-voice-section">
+      <h3><Volume2 size={20} /> Call with AI Voice</h3>
+      <p className="section-desc">Make a call using ElevenLabs voices (your clone or presets)</p>
+      <div className="call-voice-form">
+        <textarea
+          value={callMessage}
+          onChange={(e) => setCallMessage(e.target.value)}
+          placeholder="What should Chronicle say on the call?"
+          data-testid="call-message-input"
+        />
+        <div className="voice-select-row">
+          <select
+            value={selectedVoice}
+            onChange={(e) => setSelectedVoice(e.target.value)}
+            data-testid="voice-select"
+          >
+            <option value="">Default Voice</option>
+            {voices.map((voice) => (
+              <option key={voice.id} value={voice.id}>
+                {voice.name} {voice.is_clone ? '(Your Clone)' : ''}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={makeCallWithVoice}
+            disabled={calling}
+            className="call-elevenlabs-btn"
+            data-testid="call-with-voice-btn"
+          >
+            {calling ? (
+              <>Calling...</>
+            ) : (
+              <>
+                <Phone size={18} />
+                Call with Voice
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

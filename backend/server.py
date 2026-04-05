@@ -13,9 +13,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-from emergentintegrations.llm.openai import OpenAISpeechToText
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
 from twilio.rest import Client as TwilioClient
 from twilio.twiml.voice_response import VoiceResponse, Gather
@@ -25,6 +22,7 @@ import asyncio
 import stripe
 import tempfile
 import anthropic
+from openai import OpenAI
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -873,7 +871,7 @@ async def transcribe_voice(
     audio: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Transcribe voice audio to text using Whisper"""
+    """Transcribe voice audio to text using Whisper (Direct OpenAI)"""
     try:
         # Read audio file
         audio_content = await audio.read()
@@ -883,14 +881,14 @@ async def transcribe_voice(
             temp_file.write(audio_content)
             temp_path = temp_file.name
         
-        # Initialize Whisper
-        stt = OpenAISpeechToText(api_key=os.getenv("EMERGENT_LLM_KEY"))
+        # Initialize OpenAI directly
+        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         
         # Transcribe
         with open(temp_path, "rb") as audio_file:
-            response = await stt.transcribe(
-                file=audio_file,
+            response = openai_client.audio.transcriptions.create(
                 model="whisper-1",
+                file=audio_file,
                 response_format="json",
                 language="en"
             )
@@ -1399,6 +1397,268 @@ async def get_available_voices(current_user: dict = Depends(get_current_user)):
         logger.error(f"Voices error: {str(e)}")
         return {"voices": []}
 
+# ============== ELEVENLABS TTS & VOICE CLONING ==============
+
+# Default ElevenLabs voices available for all users
+DEFAULT_VOICES = [
+    {"id": "21m00Tcm4TlvDq8ikWAM", "name": "Rachel", "description": "Calm, friendly female voice"},
+    {"id": "AZnzlk1XvdvUeBnXmlld", "name": "Domi", "description": "Strong, confident female voice"},
+    {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Sarah", "description": "Soft, warm female voice"},
+    {"id": "ErXwobaYiN019PkySvjV", "name": "Antoni", "description": "Well-rounded male voice"},
+]
+
+@api_router.get("/voices/available")
+async def get_available_voices(current_user: dict = Depends(get_current_user)):
+    """Get available voices (presets + user's cloned voice if exists)"""
+    voices = DEFAULT_VOICES.copy()
+    
+    # Check if user has a cloned voice
+    user_voice = await db.user_voices.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if user_voice:
+        voices.insert(0, {
+            "id": user_voice["voice_id"],
+            "name": "My Voice",
+            "description": "Your cloned voice",
+            "is_clone": True
+        })
+    
+    return {"voices": voices}
+
+@api_router.post("/voice/tts")
+async def text_to_speech(
+    text: str,
+    voice_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Convert text to speech using ElevenLabs"""
+    try:
+        eleven_client = ElevenLabs(api_key=os.environ.get('ELEVENLABS_API_KEY'))
+        
+        # Get user's preferred voice or use default
+        if not voice_id:
+            user_settings = await db.user_settings.find_one({"user_id": current_user["id"]}, {"_id": 0})
+            voice_id = user_settings.get("selected_voice") if user_settings else None
+            if not voice_id:
+                voice_id = DEFAULT_VOICES[0]["id"]  # Default to Rachel
+        
+        # Generate audio using the new API
+        audio = eleven_client.text_to_speech.convert(
+            text=text,
+            voice_id=voice_id,
+            model_id="eleven_flash_v2_5"
+        )
+        
+        # Collect audio bytes (it returns an iterator)
+        audio_bytes = b""
+        for chunk in audio:
+            audio_bytes += chunk
+        
+        # Return as base64
+        audio_base64 = base64.b64encode(audio_bytes).decode()
+        
+        return {"audio": audio_base64, "content_type": "audio/mpeg"}
+        
+    except Exception as e:
+        logger.error(f"TTS error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate speech")
+
+class VoiceCloneRequest(BaseModel):
+    name: str = "My Voice"
+
+@api_router.post("/voice/clone")
+async def clone_voice(
+    audio: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Clone user's voice from audio sample"""
+    try:
+        eleven_client = ElevenLabs(api_key=os.environ.get('ELEVENLABS_API_KEY'))
+        
+        # Read audio file
+        audio_content = await audio.read()
+        
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+            temp_file.write(audio_content)
+            temp_path = temp_file.name
+        
+        # Check if user already has a cloned voice
+        existing_voice = await db.user_voices.find_one({"user_id": current_user["id"]}, {"_id": 0})
+        
+        if existing_voice:
+            # Delete old voice from ElevenLabs
+            try:
+                eleven_client.voices.delete(existing_voice["voice_id"])
+            except:
+                pass  # Ignore if voice doesn't exist anymore
+        
+        # Clone voice using the new API
+        voice_name = f"Chronicle_{current_user['id'][:8]}"
+        
+        from io import BytesIO
+        with open(temp_path, "rb") as f:
+            audio_bytes = f.read()
+        
+        voice = eleven_client.voices.ivc.create(
+            name=voice_name,
+            description=f"Cloned voice for Chronicle user",
+            files=[BytesIO(audio_bytes)]
+        )
+        
+        # Clean up temp file
+        os.unlink(temp_path)
+        
+        # Save voice ID to database
+        await db.user_voices.update_one(
+            {"user_id": current_user["id"]},
+            {"$set": {
+                "user_id": current_user["id"],
+                "voice_id": voice.voice_id,
+                "name": voice_name,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        
+        # Update user settings to use their cloned voice
+        await db.user_settings.update_one(
+            {"user_id": current_user["id"]},
+            {"$set": {"selected_voice": voice.voice_id}},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "voice_id": voice.voice_id,
+            "message": "Voice cloned successfully! It's now set as your default voice."
+        }
+        
+    except Exception as e:
+        logger.error(f"Voice clone error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clone voice: {str(e)}")
+
+@api_router.get("/voice/clone/sample-text")
+async def get_clone_sample_text():
+    """Get sample text for voice cloning"""
+    return {
+        "text": "Hello, I'm recording my voice for Chronicle. This sample will help create a clone of my voice that sounds natural and clear. I'll speak at my normal pace and volume, making sure to enunciate each word properly.",
+        "instructions": "Read this text clearly in a quiet environment. Speak naturally for about 30 seconds to 1 minute."
+    }
+
+class TwilioCallWithVoiceRequest(BaseModel):
+    to_phone: str
+    message: str
+    voice_id: Optional[str] = None
+
+@api_router.post("/call/with-voice")
+async def make_call_with_elevenlabs(
+    request: TwilioCallWithVoiceRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Make a call using ElevenLabs voice via Twilio"""
+    # Check if admin or partner
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
+    
+    if not is_admin and not partner:
+        # Check subscription for regular users
+        if not current_user.get("is_subscribed"):
+            raise HTTPException(status_code=403, detail="Subscription required for phone calls")
+        if current_user.get("call_minutes_remaining", 0) <= 0:
+            raise HTTPException(status_code=403, detail="No call minutes remaining")
+    
+    try:
+        eleven_client = ElevenLabs(api_key=os.environ.get('ELEVENLABS_API_KEY'))
+        
+        # Get voice ID
+        voice_id = request.voice_id
+        if not voice_id:
+            user_settings = await db.user_settings.find_one({"user_id": current_user["id"]}, {"_id": 0})
+            voice_id = user_settings.get("selected_voice") if user_settings else None
+            if not voice_id:
+                voice_id = DEFAULT_VOICES[0]["id"]
+        
+        # Generate audio with ElevenLabs using new API
+        audio = eleven_client.text_to_speech.convert(
+            text=request.message,
+            voice_id=voice_id,
+            model_id="eleven_flash_v2_5"
+        )
+        
+        # Collect audio bytes
+        audio_bytes = b""
+        for chunk in audio:
+            audio_bytes += chunk
+        
+        # Store audio in database temporarily
+        audio_id = str(uuid.uuid4())
+        await db.call_audio.insert_one({
+            "id": audio_id,
+            "audio": base64.b64encode(audio_bytes).decode(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+        })
+        
+        # Get the base URL for the audio endpoint
+        # This will be served via the /api/call/audio/{audio_id} endpoint
+        base_url = os.environ.get('APP_BASE_URL', 'https://chroniclehelper.com')
+        audio_url = f"{base_url}/api/call/audio/{audio_id}"
+        
+        # Make Twilio call with audio URL
+        twilio_client = TwilioClient(
+            os.environ.get('TWILIO_ACCOUNT_SID'),
+            os.environ.get('TWILIO_AUTH_TOKEN')
+        )
+        
+        # Create TwiML to play the audio
+        twiml = f'<Response><Play>{audio_url}</Play></Response>'
+        
+        call = twilio_client.calls.create(
+            twiml=twiml,
+            to=request.to_phone,
+            from_=os.environ.get('TWILIO_PHONE_NUMBER')
+        )
+        
+        # Log the call
+        await db.call_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "to_phone": request.to_phone,
+            "message": request.message,
+            "voice_id": voice_id,
+            "call_sid": call.sid,
+            "status": "initiated",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        # Deduct minutes for non-admin users
+        if not is_admin and not partner:
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$inc": {"call_minutes_remaining": -1}}
+            )
+        
+        return {"success": True, "call_sid": call.sid}
+        
+    except Exception as e:
+        logger.error(f"Call with voice error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to make call: {str(e)}")
+
+@api_router.get("/call/audio/{audio_id}")
+async def get_call_audio(audio_id: str):
+    """Serve audio for Twilio calls"""
+    audio_doc = await db.call_audio.find_one({"id": audio_id}, {"_id": 0})
+    if not audio_doc:
+        raise HTTPException(status_code=404, detail="Audio not found")
+    
+    audio_bytes = base64.b64decode(audio_doc["audio"])
+    
+    return Response(
+        content=audio_bytes,
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": f"inline; filename=call_audio.mp3"}
+    )
+
 @api_router.get("/invite/{link_id}")
 async def validate_magic_link(link_id: str):
     """Validate a magic link"""
@@ -1455,7 +1715,7 @@ async def get_plans():
 
 @api_router.post("/checkout/create")
 async def create_checkout(request: CheckoutRequest, http_request: Request, current_user: dict = Depends(get_current_user)):
-    """Create a Stripe checkout session for subscription"""
+    """Create a Stripe checkout session for subscription (Direct Stripe SDK)"""
     
     # Validate plan exists
     if request.plan_id not in SUBSCRIPTION_PLANS:
@@ -1463,20 +1723,32 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
     
     plan = SUBSCRIPTION_PLANS[request.plan_id]
     
-    # Initialize Stripe
-    stripe_api_key = STRIPE_API_KEY
-    webhook_url = f"{request.origin_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
+    # Set Stripe API key directly
+    stripe.api_key = STRIPE_API_KEY
     
     # Create URLs
     success_url = f"{request.origin_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{request.origin_url}/subscription"
     
-    # Create checkout session
+    # Create checkout session directly with Stripe SDK
     try:
-        checkout_request = CheckoutSessionRequest(
-            amount=plan["price"],
-            currency=plan["currency"],
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": plan["currency"],
+                    "product_data": {
+                        "name": f"Chronicle {plan['name']}",
+                    },
+                    "unit_amount": int(plan["price"] * 100),
+                    "recurring": {
+                        "interval": plan["interval"]
+                    }
+                },
+                "quantity": 1
+            }],
+            customer_email=current_user["email"],
             success_url=success_url,
             cancel_url=cancel_url,
             metadata={
@@ -1487,13 +1759,11 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
             }
         )
         
-        session = await stripe_checkout.create_checkout_session(checkout_request)
-        
         # Store transaction in database
         now = datetime.now(timezone.utc).isoformat()
         transaction_doc = {
             "id": str(uuid.uuid4()),
-            "session_id": session.session_id,
+            "session_id": session.id,
             "user_id": current_user["id"],
             "user_email": current_user["email"],
             "plan_id": request.plan_id,
@@ -1505,7 +1775,7 @@ async def create_checkout(request: CheckoutRequest, http_request: Request, curre
         }
         await db.payment_transactions.insert_one(transaction_doc)
         
-        return {"checkout_url": session.url, "session_id": session.session_id}
+        return {"checkout_url": session.url, "session_id": session.id}
         
     except Exception as e:
         logger.error(f"Checkout error: {str(e)}")
@@ -1590,14 +1860,13 @@ async def setup_trial_with_card(request: TrialSetupRequest, current_user: dict =
 
 @api_router.get("/trial/status/{session_id}")
 async def get_trial_status(session_id: str, current_user: dict = Depends(get_current_user)):
-    """Check trial setup status and activate subscription if paid"""
+    """Check trial setup status and activate subscription if paid (Direct Stripe SDK)"""
     
-    stripe_api_key = STRIPE_API_KEY
-    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+    stripe.api_key = STRIPE_API_KEY
     
     try:
-        # Get checkout status
-        status = await stripe_checkout.get_checkout_status(session_id)
+        # Get checkout session status directly from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
         
         # Find the transaction
         transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
@@ -1614,7 +1883,7 @@ async def get_trial_status(session_id: str, current_user: dict = Depends(get_cur
             }
         
         # If payment successful, activate subscription
-        if status.payment_status == "paid":
+        if session.payment_status == "paid":
             now = datetime.now(timezone.utc).isoformat()
             plan_id = transaction.get("plan_id")
             plan = SUBSCRIPTION_PLANS.get(plan_id, {})
@@ -1653,7 +1922,7 @@ async def get_trial_status(session_id: str, current_user: dict = Depends(get_cur
             }
         
         return {
-            "status": status.status,
+            "status": session.status,
             "trial_active": False
         }
         
@@ -1663,13 +1932,13 @@ async def get_trial_status(session_id: str, current_user: dict = Depends(get_cur
 
 @api_router.get("/checkout/status/{session_id}")
 async def get_checkout_status(session_id: str, current_user: dict = Depends(get_current_user)):
-    """Check the status of a checkout session and update subscription if paid"""
+    """Check the status of a checkout session and update subscription if paid (Direct Stripe SDK)"""
     
-    stripe_api_key = STRIPE_API_KEY
-    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+    stripe.api_key = STRIPE_API_KEY
     
     try:
-        status = await stripe_checkout.get_checkout_status(session_id)
+        # Get checkout session directly from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
         
         # Find the transaction
         transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
@@ -1680,13 +1949,13 @@ async def get_checkout_status(session_id: str, current_user: dict = Depends(get_
         # Check if already processed
         if transaction.get("payment_status") == "paid":
             return {
-                "status": status.status,
-                "payment_status": status.payment_status,
+                "status": session.status,
+                "payment_status": session.payment_status,
                 "already_processed": True
             }
         
         # If payment successful, update user subscription
-        if status.payment_status == "paid":
+        if session.payment_status == "paid":
             now = datetime.now(timezone.utc).isoformat()
             plan_id = transaction.get("plan_id")
             plan = SUBSCRIPTION_PLANS.get(plan_id, {})
@@ -1718,10 +1987,10 @@ async def get_checkout_status(session_id: str, current_user: dict = Depends(get_
             )
         
         return {
-            "status": status.status,
-            "payment_status": status.payment_status,
-            "amount_total": status.amount_total,
-            "currency": status.currency
+            "status": session.status,
+            "payment_status": session.payment_status,
+            "amount_total": session.amount_total,
+            "currency": session.currency
         }
         
     except Exception as e:
@@ -1751,22 +2020,33 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    """Handle Stripe webhook events"""
+    """Handle Stripe webhook events (Direct Stripe SDK)"""
     try:
         body = await request.body()
         signature = request.headers.get("Stripe-Signature", "")
         
-        stripe_api_key = STRIPE_API_KEY
-        stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url="")
+        stripe.api_key = STRIPE_API_KEY
+        webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
         
-        webhook_response = await stripe_checkout.handle_webhook(body, signature)
+        # Verify webhook signature if secret is configured
+        if webhook_secret:
+            try:
+                event = stripe.Webhook.construct_event(body, signature, webhook_secret)
+            except stripe.error.SignatureVerificationError:
+                raise HTTPException(status_code=400, detail="Invalid signature")
+        else:
+            # Parse event without verification (development mode)
+            import json
+            event = json.loads(body)
         
-        logger.info(f"Webhook received: {webhook_response.event_type}")
+        event_type = event.get("type") if isinstance(event, dict) else event.type
+        logger.info(f"Webhook received: {event_type}")
         
         # Handle checkout.session.completed event
-        if webhook_response.event_type == "checkout.session.completed":
-            session_id = webhook_response.session_id
-            metadata = webhook_response.metadata
+        if event_type == "checkout.session.completed":
+            session_data = event.get("data", {}).get("object", {}) if isinstance(event, dict) else event.data.object
+            session_id = session_data.get("id") if isinstance(session_data, dict) else session_data.id
+            metadata = session_data.get("metadata", {}) if isinstance(session_data, dict) else session_data.metadata
             
             if metadata and metadata.get("user_id"):
                 user_id = metadata["user_id"]
