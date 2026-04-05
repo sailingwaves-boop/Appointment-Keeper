@@ -91,14 +91,10 @@ body {
 .auth-logo {
   width: 72px;
   height: 72px;
-  color: transparent;
-  background: var(--chrome-gradient);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #667eea;
   margin-bottom: 1rem;
-  animation: chromeShine 3s ease-in-out infinite, floatBrain 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px var(--accent-glow));
+  animation: floatBrain 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.6));
 }
 
 @keyframes chromeShine {

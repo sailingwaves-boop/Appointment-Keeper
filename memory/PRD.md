@@ -31,10 +31,12 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - [x] App Builder Mode toggle (switches AI context to coding/development focus)
 - [x] Native Phone SMS (admin only - opens native SMS app)
 - [x] Native Phone Call (admin only - opens native dialer)
-- [x] **ElevenLabs TTS for chat playback** (replaces browser voice)
-- [x] **Voice cloning** (users can clone their voice via ElevenLabs)
-- [x] **4 preset ElevenLabs voices** (Rachel, Domi, Sarah, Antoni)
-- [x] **Twilio calls with ElevenLabs voice** (AI-generated voice plays on call)
+- [x] ElevenLabs TTS for chat playback (replaces browser voice)
+- [x] Voice cloning (users can clone their voice via ElevenLabs)
+- [x] 4 preset ElevenLabs voices (Rachel, Domi, Sarah, Antoni)
+- [x] Twilio calls with ElevenLabs voice (AI-generated voice plays on call)
+- [x] **Brain icon visible on Google sign-in page**
+- [x] **Admin/Partner bypass for SMS/call credits** - no credit requirements for admin
 
 ### Emergent Dependencies REMOVED
 - ❌ emergentintegrations library - COMPLETELY REMOVED
@@ -51,38 +53,11 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - `/app/frontend/src/App.js` - Monolithic React frontend (~3000 lines)
 - `/app/frontend/src/App.css` - Styling
 
-## API Endpoints
-
-### Voice/TTS
-- `POST /api/voice/tts` - Generate speech with ElevenLabs
-- `POST /api/voice/clone` - Clone user's voice from audio sample
-- `GET /api/voice/clone/sample-text` - Get sample text for voice cloning
-- `GET /api/voices/available` - Get preset + user's cloned voices
-- `POST /api/voice/transcribe` - Speech-to-text (Direct OpenAI Whisper)
-
-### Calls
-- `POST /api/call/with-voice` - Make call with ElevenLabs voice via Twilio
-- `GET /api/call/audio/{audio_id}` - Serve audio for Twilio playback
-- `POST /api/call/place` - Place call (Twilio or native)
-- `POST /api/sms/send` - Send SMS (Twilio or native)
-
-### Auth & User
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/google/token` - Google OAuth
-- `GET /api/user/settings` - User settings
-- `POST /api/user/settings` - Update settings
-
-### Chat
-- `POST /api/chat` - Chat with AI (supports `app_builder_mode` flag)
-- `GET /api/memory` - Get user memories
-
-### Payments (Direct Stripe SDK)
-- `POST /api/checkout/create` - Create Stripe checkout session
-- `GET /api/checkout/status/{session_id}` - Check payment status
-- `POST /api/trial/setup` - Start trial with card
-- `GET /api/trial/status/{session_id}` - Check trial status
-- `POST /api/webhook/stripe` - Stripe webhook handler
+## Admin Features
+- Admin email: sailingwaves@gmail.com
+- Partners can be added via Admin panel
+- Admin/Partners bypass all credit/subscription checks for SMS and calls
+- Chronicle AI asks "Twilio or your phone?" when admin requests SMS/call
 
 ## Environment Variables (Backend)
 - `MONGO_URL` - MongoDB connection
@@ -94,7 +69,7 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - `TWILIO_ACCOUNT_SID` - Twilio SID
 - `TWILIO_AUTH_TOKEN` - Twilio auth token
 - `TWILIO_PHONE_NUMBER` - Twilio phone number
-- `APP_BASE_URL` - Base URL for audio serving (e.g., https://chroniclehelper.com)
+- `APP_BASE_URL` - Base URL for audio serving
 
 ## Deployment
 User deploys to VPS with this command:
@@ -103,4 +78,4 @@ cd /app && git pull && cd frontend && npm run build && cp -r build/* /app/backen
 ```
 
 ## Last Updated
-2026-04-05 - Removed all Emergent dependencies, added ElevenLabs TTS/voice cloning, Twilio calls with AI voice
+2026-04-05 - Fixed brain icon, admin credit bypass, Chronicle SMS/call conversation flow

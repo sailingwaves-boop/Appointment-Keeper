@@ -677,12 +677,20 @@ IMPORTANT RULES:
 - Just have a normal conversation - be helpful, friendly, and conversational
 - If you don't know something, say so - don't make up commands or instructions
 
+PHONE & SMS CAPABILITIES:
+When the user asks you to send a text message or make a phone call, you MUST ask them:
+"How would you like to send this - via Twilio or using your phone?"
+- If they say "Twilio" - respond with: [ACTION:SMS_TWILIO:phone_number:message] or [ACTION:CALL_TWILIO:phone_number:message]
+- If they say "my phone" or "native" - respond with: [ACTION:SMS_NATIVE:phone_number:message] or [ACTION:CALL_NATIVE:phone_number]
+Always confirm the contact name and message before sending.
+
 You can help with:
 - Answering questions
 - Having conversations
 - Helping with planning and ideas
 - Coding help ONLY when asked
-- Managing contacts and phone features ONLY when asked
+- Sending texts and making calls (always ask Twilio or phone first)
+- Managing contacts
 
 You have persistent memory - you remember what the user tells you across conversations.
 {rules_context}{memory_context}{contacts_context}
@@ -2092,15 +2100,20 @@ async def stripe_webhook(request: Request):
 async def send_sms(request: SendSMSRequest, current_user: dict = Depends(get_current_user)):
     """Send an SMS message via Twilio"""
     
-    # Check if user has SMS quota (Pro or Business plan)
-    texts_remaining = current_user.get("texts_remaining", 0)
-    subscription_tier = current_user.get("subscription_tier", "")
+    # Admin and partners bypass all checks
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
     
-    if not subscription_tier or "starter" in subscription_tier:
-        raise HTTPException(status_code=403, detail="SMS feature requires Pro or Business subscription")
-    
-    if texts_remaining <= 0:
-        raise HTTPException(status_code=403, detail="You have no SMS credits remaining. Please upgrade your plan.")
+    if not is_admin and not partner:
+        # Check if user has SMS quota (Pro or Business plan)
+        texts_remaining = current_user.get("texts_remaining", 0)
+        subscription_tier = current_user.get("subscription_tier", "")
+        
+        if not subscription_tier or "starter" in subscription_tier:
+            raise HTTPException(status_code=403, detail="SMS feature requires Pro or Business subscription")
+        
+        if texts_remaining <= 0:
+            raise HTTPException(status_code=403, detail="You have no SMS credits remaining. Please upgrade your plan.")
     
     try:
         # Initialize Twilio client
@@ -2122,11 +2135,12 @@ async def send_sms(request: SendSMSRequest, current_user: dict = Depends(get_cur
             to=request.to_phone
         )
         
-        # Decrement SMS quota
-        await db.users.update_one(
-            {"id": current_user["id"]},
-            {"$inc": {"texts_remaining": -1}}
-        )
+        # Decrement SMS quota (skip for admin/partners)
+        if not is_admin and not partner:
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$inc": {"texts_remaining": -1}}
+            )
         
         # Log the SMS
         now = datetime.now(timezone.utc).isoformat()
@@ -2154,15 +2168,20 @@ async def send_sms(request: SendSMSRequest, current_user: dict = Depends(get_cur
 async def make_call(request: MakeCallRequest, http_request: Request, current_user: dict = Depends(get_current_user)):
     """Initiate an outbound call with AI voice"""
     
-    # Check if user has call minutes (Pro or Business plan)
-    call_minutes_remaining = current_user.get("call_minutes_remaining", 0)
-    subscription_tier = current_user.get("subscription_tier", "")
+    # Admin and partners bypass all checks
+    is_admin = current_user["email"] == ADMIN_EMAIL
+    partner = await db.admin_partners.find_one({"email": current_user["email"]})
     
-    if not subscription_tier or "starter" in subscription_tier:
-        raise HTTPException(status_code=403, detail="Voice call feature requires Pro or Business subscription")
-    
-    if call_minutes_remaining <= 0:
-        raise HTTPException(status_code=403, detail="You have no call minutes remaining. Please upgrade your plan.")
+    if not is_admin and not partner:
+        # Check if user has call minutes (Pro or Business plan)
+        call_minutes_remaining = current_user.get("call_minutes_remaining", 0)
+        subscription_tier = current_user.get("subscription_tier", "")
+        
+        if not subscription_tier or "starter" in subscription_tier:
+            raise HTTPException(status_code=403, detail="Voice call feature requires Pro or Business subscription")
+        
+        if call_minutes_remaining <= 0:
+            raise HTTPException(status_code=403, detail="You have no call minutes remaining. Please upgrade your plan.")
     
     try:
         # Initialize Twilio client
