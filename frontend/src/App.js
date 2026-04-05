@@ -823,6 +823,7 @@ const ChatView = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [appBuilderMode, setAppBuilderMode] = useState(false);
   const { user } = useAuth();
   const messagesEndRef = React.useRef(null);
   const fileInputRef = React.useRef(null);
@@ -1007,7 +1008,8 @@ const ChatView = () => {
       const res = await axios.post(`${API_URL}/api/chat`, {
         message: userMessage,
         session_id: sessionId,
-        image_url: imageUrl
+        image_url: imageUrl,
+        app_builder_mode: appBuilderMode
       }, {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: abortControllerRef.current.signal
@@ -1089,6 +1091,15 @@ const ChatView = () => {
       <div className="chat-header">
         <h2>Chat with Chronicle</h2>
         <div className="chat-header-actions">
+          <button
+            onClick={() => setAppBuilderMode(!appBuilderMode)}
+            className={`mode-toggle-btn ${appBuilderMode ? 'active' : ''}`}
+            title={appBuilderMode ? 'App Builder Mode ON' : 'App Builder Mode OFF'}
+            data-testid="app-builder-toggle"
+          >
+            <Code size={18} />
+            {appBuilderMode ? 'Builder' : 'Chat'}
+          </button>
           <button 
             onClick={toggleMemories} 
             className={`memory-toggle-btn ${showMemories ? 'active' : ''}`}

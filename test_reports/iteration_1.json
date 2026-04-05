@@ -1,0 +1,36 @@
+{
+  "summary": "Completed testing of App Builder Mode feature. All backend API tests pass (8/8). Frontend UI tests pass - toggle visible, state changes correctly, and builder mode produces code-focused responses.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_app_builder_mode.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_app_builder_mode.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Updated test user (test@chronicle.com) to have card_on_file=true and is_subscribed=true to access chat view",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "App Builder Mode feature fully tested. Test user credentials: test@chronicle.com / test123456. User has been updated with card_on_file=true and is_subscribed=true to bypass trial setup page.",
+  "features_tested": {
+    "app_builder_mode_toggle_visible": "PASS - Toggle appears in chat header with data-testid='app-builder-toggle'",
+    "toggle_changes_visual_state": "PASS - Toggle text changes from 'Chat' to 'Builder' and has 'active' class when enabled",
+    "chat_normal_mode": "PASS - POST /api/chat with app_builder_mode=false returns conversational response",
+    "chat_builder_mode": "PASS - POST /api/chat with app_builder_mode=true returns code-focused response with Python code blocks",
+    "builder_mode_response_quality": "PASS - Response includes proper code formatting, function definitions, and technical explanations"
+  }
+}
