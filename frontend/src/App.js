@@ -916,6 +916,55 @@ const ChatView = () => {
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
+  // Execute actions from Chronicle's response (SMS/Call)
+  const executeActionsFromResponse = async (response) => {
+    const token = localStorage.getItem('token');
+    
+    // Check for SMS action: [ACTION:SMS_TWILIO:phone:message] or [ACTION:SMS_NATIVE:phone:message]
+    const smsMatch = response.match(/\[ACTION:(SMS_TWILIO|SMS_NATIVE):([^:]+):([^\]]+)\]/);
+    if (smsMatch) {
+      const [, type, phone, message] = smsMatch;
+      const useNative = type === 'SMS_NATIVE';
+      try {
+        const res = await axios.post(`${API_URL}/api/sms/send`, {
+          to: phone,
+          message: message,
+          use_native: useNative
+        }, { headers: { 'Authorization': `Bearer ${token}` }});
+        
+        if (res.data.native && res.data.link) {
+          window.location.href = res.data.link;
+        } else if (res.data.success) {
+          toast.success('SMS sent via Twilio!');
+        }
+      } catch (err) {
+        toast.error('Failed to send SMS');
+      }
+    }
+    
+    // Check for Call action: [ACTION:CALL_TWILIO:phone:message] or [ACTION:CALL_NATIVE:phone]
+    const callMatch = response.match(/\[ACTION:(CALL_TWILIO|CALL_NATIVE):([^:\]]+)(?::([^\]]+))?\]/);
+    if (callMatch) {
+      const [, type, phone, message] = callMatch;
+      const useNative = type === 'CALL_NATIVE';
+      try {
+        const res = await axios.post(`${API_URL}/api/call/place`, {
+          to: phone,
+          message: message || '',
+          use_native: useNative
+        }, { headers: { 'Authorization': `Bearer ${token}` }});
+        
+        if (res.data.native && res.data.link) {
+          window.location.href = res.data.link;
+        } else if (res.data.success) {
+          toast.success('Call initiated via Twilio!');
+        }
+      } catch (err) {
+        toast.error('Failed to place call');
+      }
+    }
+  };
+
   // Text-to-speech for AI responses using ElevenLabs
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef(null);
