@@ -738,7 +738,7 @@ User's name: {current_user['name']}"""
         client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
         
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4-20250514",
             max_tokens=8192,
             system=system_message,
             messages=messages
