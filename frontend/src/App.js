@@ -3334,10 +3334,144 @@ function App() {
   );
 }
 
+// Privacy Policy Page
+const PrivacyPage = () => {
+  return (
+    <div className="legal-page">
+      <div className="legal-container">
+        <h1>Privacy Policy</h1>
+        <p className="last-updated">Last updated: April 2026</p>
+        
+        <section>
+          <h2>1. Information We Collect</h2>
+          <p>Chronicle collects information you provide directly, including:</p>
+          <ul>
+            <li>Account information (name, email address)</li>
+            <li>Messages and conversations with our AI assistant</li>
+            <li>Contacts you add to the app</li>
+            <li>Voice recordings for transcription</li>
+            <li>Payment information (processed securely via Stripe)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>2. How We Use Your Information</h2>
+          <p>We use your information to:</p>
+          <ul>
+            <li>Provide and improve our AI assistant services</li>
+            <li>Maintain conversation memory across sessions</li>
+            <li>Process payments and manage subscriptions</li>
+            <li>Send SMS and make calls on your behalf (when requested)</li>
+            <li>Communicate with you about your account</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>3. Data Storage and Security</h2>
+          <p>Your data is stored securely and encrypted. We use industry-standard security measures to protect your information. Conversation data and memories are stored to provide continuity in your AI assistant experience.</p>
+        </section>
+
+        <section>
+          <h2>4. Third-Party Services</h2>
+          <p>We use the following third-party services:</p>
+          <ul>
+            <li>Google OAuth for authentication</li>
+            <li>Stripe for payment processing</li>
+            <li>Twilio for SMS and voice calls</li>
+            <li>ElevenLabs for voice synthesis</li>
+            <li>OpenAI for voice transcription</li>
+            <li>Anthropic for AI conversations</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>5. Your Rights</h2>
+          <p>You can request to delete your account and all associated data at any time through the Settings page or by contacting us.</p>
+        </section>
+
+        <section>
+          <h2>6. Contact Us</h2>
+          <p>For privacy-related questions, contact us at: ceo@usefulgadgets.ltd</p>
+        </section>
+
+        <a href="/" className="back-link">← Back to Chronicle</a>
+      </div>
+    </div>
+  );
+};
+
+// Terms of Service Page
+const TermsPage = () => {
+  return (
+    <div className="legal-page">
+      <div className="legal-container">
+        <h1>Terms of Service</h1>
+        <p className="last-updated">Last updated: April 2026</p>
+        
+        <section>
+          <h2>1. Acceptance of Terms</h2>
+          <p>By accessing and using Chronicle, you agree to be bound by these Terms of Service. If you do not agree, please do not use the service.</p>
+        </section>
+
+        <section>
+          <h2>2. Description of Service</h2>
+          <p>Chronicle is an AI-powered personal assistant that provides:</p>
+          <ul>
+            <li>Conversational AI with persistent memory</li>
+            <li>SMS and voice call capabilities</li>
+            <li>Contact management</li>
+            <li>Voice transcription and synthesis</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>3. Account Registration</h2>
+          <p>You must provide accurate information when creating an account. You are responsible for maintaining the security of your account credentials.</p>
+        </section>
+
+        <section>
+          <h2>4. Subscription and Payment</h2>
+          <p>Chronicle offers a 10-day free trial. After the trial, continued use requires a paid subscription. Payments are processed securely through Stripe. You may cancel your subscription at any time.</p>
+        </section>
+
+        <section>
+          <h2>5. Acceptable Use</h2>
+          <p>You agree not to use Chronicle for:</p>
+          <ul>
+            <li>Any illegal or unauthorized purpose</li>
+            <li>Harassment, spam, or abuse</li>
+            <li>Attempting to gain unauthorized access</li>
+            <li>Interfering with the service's operation</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>6. Limitation of Liability</h2>
+          <p>Chronicle is provided "as is" without warranties. We are not liable for any indirect, incidental, or consequential damages arising from your use of the service.</p>
+        </section>
+
+        <section>
+          <h2>7. Changes to Terms</h2>
+          <p>We may update these terms from time to time. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+        </section>
+
+        <section>
+          <h2>8. Contact</h2>
+          <p>For questions about these terms, contact us at: ceo@usefulgadgets.ltd</p>
+        </section>
+
+        <a href="/" className="back-link">← Back to Chronicle</a>
+      </div>
+    </div>
+  );
+};
+
 // Separate component to handle routing
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/google/callback" element={<AuthCallback />} />
       <Route path="/disclosure" element={<DisclosurePage />} />
