@@ -838,16 +838,13 @@ const ChatView = () => {
   useEffect(() => {
     const loadLastSession = async () => {
       try {
-        // Get last session from localStorage or API
-        const savedSessionId = localStorage.getItem('chronicle_session_id');
-        
-        // Fetch chat sessions
+        // Always fetch latest session from server (enables multi-device sync)
         const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`);
         const sessions = sessionsRes.data.sessions;
         
         if (sessions && sessions.length > 0) {
-          // Use saved session if exists, otherwise use most recent
-          const targetSession = savedSessionId || sessions[0]._id;
+          // Always use the most recent session from server
+          const targetSession = sessions[0]._id;
           
           // Fetch messages for this session
           const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${targetSession}`);
@@ -863,7 +860,6 @@ const ChatView = () => {
             
             setMessages(loadedMessages);
             setSessionId(targetSession);
-            localStorage.setItem('chronicle_session_id', targetSession);
           }
         }
       } catch (err) {
@@ -879,13 +875,6 @@ const ChatView = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Save session ID to localStorage when it changes
-  useEffect(() => {
-    if (sessionId) {
-      localStorage.setItem('chronicle_session_id', sessionId);
-    }
-  }, [sessionId]);
 
   // Handle file selection
   const handleFileSelect = (e) => {
