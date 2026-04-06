@@ -739,23 +739,50 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    message_lower = request.message.lower()
+    message_lower = request.message.lower().strip()
     
     # ============== FILE COMMANDS ==============
     
-    # Check for "save this as [filename]" or "save as [filename]"
     import re
+    
+    # Check for "hold" at the end - store content for next command
+    if message_lower.endswith('hold') or message_lower.endswith('hold.'):
+        # Store the content (remove "hold" from the end)
+        content_to_hold = request.message.strip()
+        if content_to_hold.lower().endswith('hold.'):
+            content_to_hold = content_to_hold[:-5].strip()
+        elif content_to_hold.lower().endswith('hold'):
+            content_to_hold = content_to_hold[:-4].strip()
+        
+        # Save to a temporary hold area for this user
+        await db.user_holds.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "content": content_to_hold, "created_at": now}},
+            upsert=True
+        )
+        return ChatResponse(response="Got it, I'm holding that. What would you like me to do with it? You can say 'save this as [filename]' or ask me to work with it.", session_id=session_id)
+    
+    # Check for "save this as [filename]" or "save as [filename]"
     save_match = re.search(r'save (?:this )?as ["\']?([a-zA-Z0-9_\-\s]+)["\']?', message_lower)
     if save_match:
         filename = save_match.group(1).strip().replace(' ', '_')
-        # Get the last assistant response to save
-        last_conv = await db.conversations.find_one(
-            {"user_id": user_id, "session_id": session_id},
-            {"_id": 0},
-            sort=[("timestamp", -1)]
-        )
-        if last_conv:
-            content = last_conv.get("assistant_response", "")
+        
+        # First check if there's held content
+        held = await db.user_holds.find_one({"user_id": user_id}, {"_id": 0})
+        if held and held.get("content"):
+            content = held["content"]
+            # Clear the hold
+            await db.user_holds.delete_one({"user_id": user_id})
+        else:
+            # Fall back to last assistant response
+            last_conv = await db.conversations.find_one(
+                {"user_id": user_id},
+                {"_id": 0},
+                sort=[("timestamp", -1)]
+            )
+            content = last_conv.get("assistant_response", "") if last_conv else ""
+        
+        if content:
             # Save the file
             existing = await db.user_files.find_one({"user_id": user_id, "filename": filename})
             if existing:
@@ -773,6 +800,8 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
                     "updated_at": now
                 })
             return ChatResponse(response=f"Done. I've saved that as '{filename}'. You can open it anytime by saying 'open {filename}'.", session_id=session_id)
+        else:
+            return ChatResponse(response="I don't have anything to save. Send me some content with 'hold' at the end first, or ask me something and then say 'save this as [filename]'.", session_id=session_id)
     
     # Check for "open [filename]" - handles variations like "open chronicle", "open file called chronicle", etc.
     open_patterns = [
