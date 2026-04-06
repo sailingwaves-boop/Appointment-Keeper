@@ -961,8 +961,16 @@ const ChatView = () => {
   useEffect(() => {
     const loadLastSession = async () => {
       try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setLoadingHistory(false);
+          return;
+        }
+        
         // Always fetch latest session from server (enables multi-device sync)
-        const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`);
+        const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         const sessions = sessionsRes.data.sessions;
         
         if (sessions && sessions.length > 0) {
@@ -970,7 +978,9 @@ const ChatView = () => {
           const targetSession = sessions[0]._id;
           
           // Fetch messages for this session
-          const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${targetSession}`);
+          const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${targetSession}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           const conversations = historyRes.data.conversations;
           
           if (conversations && conversations.length > 0) {
@@ -986,7 +996,7 @@ const ChatView = () => {
           }
         }
       } catch (err) {
-        console.log('No previous session found');
+        console.log('No previous session found', err);
       } finally {
         setLoadingHistory(false);
       }
