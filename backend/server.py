@@ -642,18 +642,24 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
     
-    # Load user's memory for context - LIMIT TO 10 MOST RECENT
-    memories = await db.memories.find({"user_id": user_id}, {"_id": 0}).sort("updated_at", -1).limit(10).to_list(10)
+    # Load user's memory for context
+    memories = await db.memories.find({"user_id": user_id}, {"_id": 0}).sort("updated_at", -1).limit(50).to_list(50)
     memory_context = ""
     if memories:
-        memory_context = "\n\nUser's stored info:\n"
-        for mem in memories[:10]:
-            val = mem['value'][:200] if len(mem['value']) > 200 else mem['value']
-            memory_context += f"- {mem['key']}: {val}\n"
+        memory_context = "\n\nUser's stored information:\n"
+        for mem in memories:
+            memory_context += f"- {mem['key']}: {mem['value']}\n"
     
-    # Load user's contacts - DISABLED TO SAVE TOKENS
-    # Contacts are no longer sent with every message
+    # Load user's contacts
+    contacts = await db.contacts.find({"user_id": user_id}, {"_id": 0}).to_list(50)
     contacts_context = ""
+    if contacts:
+        contacts_context = "\n\nUser's contacts:\n"
+        for contact in contacts:
+            contacts_context += f"- {contact['name']}: {contact['phone']}"
+            if contact.get('email'):
+                contacts_context += f" ({contact['email']})"
+            contacts_context += "\n"
     
     # Load user's custom rules
     user_settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
