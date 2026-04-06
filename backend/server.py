@@ -71,7 +71,7 @@ async def brave_web_search(query: str, count: int = 5) -> str:
             response = await client.get(
                 "https://api.search.brave.com/res/v1/web/search",
                 headers={"X-Subscription-Token": api_key},
-                params={"q": query, "count": count},
+                params={"q": query, "count": 10},  # Fetch more, filter down
                 timeout=10
             )
             
@@ -85,13 +85,45 @@ async def brave_web_search(query: str, count: int = 5) -> str:
             if not results:
                 return ""
             
+            # Clean and filter results
+            seen_domains = set()
+            clean_results = []
+            
+            for r in results:
+                # Skip if no description or too short
+                desc = r.get("description", "").strip()
+                if not desc or len(desc) < 50:
+                    continue
+                
+                # Skip duplicate domains
+                url = r.get("url", "")
+                domain = url.split("/")[2] if "/" in url else url
+                if domain in seen_domains:
+                    continue
+                seen_domains.add(domain)
+                
+                # Clean the description - remove extra whitespace
+                desc = " ".join(desc.split())
+                
+                # Truncate long descriptions
+                if len(desc) > 300:
+                    desc = desc[:300] + "..."
+                
+                title = r.get("title", "").strip()
+                if title:
+                    clean_results.append({"title": title, "desc": desc, "url": url})
+                
+                # Stop at 5 clean results
+                if len(clean_results) >= 5:
+                    break
+            
+            if not clean_results:
+                return ""
+            
             # Format results for context
             search_context = f"\n\n[Web Search Results for: {query}]\n"
-            for i, r in enumerate(results[:5], 1):
-                title = r.get("title", "")
-                desc = r.get("description", "")
-                url = r.get("url", "")
-                search_context += f"{i}. {title}\n   {desc}\n   Source: {url}\n\n"
+            for i, r in enumerate(clean_results, 1):
+                search_context += f"{i}. {r['title']}\n   {r['desc']}\n   Source: {r['url']}\n\n"
             
             return search_context
             
