@@ -1114,6 +1114,10 @@ async def get_chat_sessions(current_user: dict = Depends(get_current_user)):
         {"$limit": 20}
     ]
     sessions = await db.conversations.aggregate(pipeline).to_list(20)
+    # Add preview (first 50 chars of first message)
+    for session in sessions:
+        first_msg = session.get("first_message", "")
+        session["preview"] = first_msg[:50] + "..." if len(first_msg) > 50 else first_msg
     return {"sessions": sessions}
 
 # ============== MEMORY ROUTES ==============

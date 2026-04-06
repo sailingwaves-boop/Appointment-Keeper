@@ -829,11 +829,73 @@ const ChatView = () => {
   const [appBuilderMode, setAppBuilderMode] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [webSearchAvailable, setWebSearchAvailable] = useState(false);
+  const [showChatSwitcher, setShowChatSwitcher] = useState(false);
+  const [chatSessions, setChatSessions] = useState([]);
   const { user } = useAuth();
   const messagesEndRef = React.useRef(null);
   const fileInputRef = React.useRef(null);
   const cameraInputRef = React.useRef(null);
   const abortControllerRef = React.useRef(null);
+
+  // Force scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    // Also try after a short delay for any async rendering
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 100);
+  }, []);
+
+  // Fetch chat sessions for switcher
+  const fetchChatSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/chat/sessions`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setChatSessions(res.data.sessions || []);
+    } catch (err) {
+      console.error('Failed to load chat sessions');
+    }
+  };
+
+  // Load a specific chat session
+  const loadChatSession = async (targetSessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${targetSessionId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const conversations = historyRes.data.conversations;
+      
+      if (conversations && conversations.length > 0) {
+        const loadedMessages = [];
+        conversations.reverse().forEach(conv => {
+          loadedMessages.push({ role: 'user', content: conv.user_message });
+          loadedMessages.push({ role: 'assistant', content: conv.assistant_response });
+        });
+        setMessages(loadedMessages);
+        setSessionId(targetSessionId);
+      } else {
+        setMessages([]);
+        setSessionId(targetSessionId);
+      }
+      setShowChatSwitcher(false);
+    } catch (err) {
+      toast.error('Failed to load chat');
+    }
+  };
+
+  // Start new chat
+  const startNewChat = () => {
+    setMessages([]);
+    setSessionId(null);
+    setShowChatSwitcher(false);
+  };
 
   // Check if web search is available (admin enabled)
   useEffect(() => {
@@ -882,13 +944,6 @@ const ChatView = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
-  // Scroll page to top on mount (fix for page loading scrolled down)
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    document.body.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
-  }, []);
 
   // Load last session on mount
   useEffect(() => {
@@ -1273,6 +1328,41 @@ const ChatView = () => {
           >
             <Brain size={18} />
           </button>
+          <div className="chat-switcher-wrapper">
+            <button 
+              onClick={() => { setShowChatSwitcher(!showChatSwitcher); fetchChatSessions(); }}
+              className={`mode-toggle-btn ${showChatSwitcher ? 'active' : ''}`}
+              title="Switch chats"
+              data-testid="chat-switcher-btn"
+            >
+              <MessageSquare size={18} />
+              Chats
+            </button>
+            {showChatSwitcher && (
+              <div className="chat-switcher-dropdown">
+                <div className="chat-switcher-header">
+                  <span>Your Chats</span>
+                  <button onClick={startNewChat} className="new-chat-small-btn">
+                    <Plus size={14} /> New
+                  </button>
+                </div>
+                {chatSessions.length === 0 ? (
+                  <div className="no-chats">No previous chats</div>
+                ) : (
+                  chatSessions.slice(0, 10).map((session, idx) => (
+                    <button
+                      key={session._id || idx}
+                      onClick={() => loadChatSession(session._id)}
+                      className={`chat-session-item ${sessionId === session._id ? 'active' : ''}`}
+                    >
+                      <MessageSquare size={14} />
+                      <span>{session.preview || `Chat ${idx + 1}`}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <button onClick={startNewChat} className="new-chat-btn" data-testid="new-chat-btn">
             <Plus size={18} />
             New Chat
