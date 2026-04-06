@@ -26,6 +26,8 @@
 html {
   scroll-behavior: auto !important;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 body {
@@ -37,6 +39,14 @@ body {
   padding-top: env(safe-area-inset-top, 0);
   overflow-x: hidden;
   position: relative;
+  width: 100%;
+  max-width: 100vw;
+}
+
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* Loading Screen */
@@ -1658,26 +1668,47 @@ body {
   .chat-view {
     max-width: 100%;
     width: 100%;
+    overflow-x: hidden;
   }
 
   .chat-header {
-    padding: 1rem;
-    padding-left: 4rem;
+    padding: 0.75rem;
+    padding-left: 3.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .chat-header h2 {
+    display: none;
+  }
+  
+  .chat-header-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .mode-toggle-btn,
+  .memory-toggle-btn,
+  .new-chat-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 12px;
   }
 
   .messages-container {
-    padding: 1rem;
+    padding: 0.75rem;
     overflow-x: hidden;
   }
 
   .message {
     max-width: 100%;
     width: 100%;
+    overflow-x: hidden;
   }
 
   .message-content {
-    max-width: calc(100% - 50px);
+    max-width: calc(100% - 45px);
     word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .message-avatar {
