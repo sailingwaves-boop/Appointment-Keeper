@@ -803,16 +803,20 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
         else:
             return ChatResponse(response="I don't have anything to save. Send me some content with 'hold' at the end first, or ask me something and then say 'save this as [filename]'.", session_id=session_id)
     
-    # Check for "open [filename]" - handles variations like "open chronicle", "open file called chronicle", etc.
+    # Check for "open [filename]" - only trigger on direct commands, not conversational phrases
+    # Must start with command word or be very short (direct command)
     open_patterns = [
-        r'(?:open|load|get|read) (?:the )?(?:file )?(?:called |named )?["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
-        r'(?:open|load|get|read) ["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
+        r'^(?:open|load) (?:the )?(?:file )?(?:called |named )?["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
+        r'^(?:open|load) ["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
+        r'^(?:read|get) (?:the )?file ["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
     ]
     open_match = None
-    for pattern in open_patterns:
-        open_match = re.search(pattern, message_lower.strip())
-        if open_match:
-            break
+    # Only check if message is short enough to be a command (not a full sentence)
+    if len(message_lower.split()) <= 6:
+        for pattern in open_patterns:
+            open_match = re.search(pattern, message_lower.strip())
+            if open_match:
+                break
     
     if open_match and not any(x in message_lower for x in ['show my files', 'list my files', 'what files']):
         filename = open_match.group(1).strip().replace(' ', '_')
