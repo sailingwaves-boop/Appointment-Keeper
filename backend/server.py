@@ -756,7 +756,7 @@ You are now in coding mode. Help the user build whatever they need."""
         if request.app_builder_mode:
             model = "claude-sonnet-4-20250514"  # Smart model for coding
         else:
-            model = "claude-3-5-haiku-20241022"  # Cheaper model for normal chat
+            model = "claude-haiku-4-5-20251001"  # Cheaper model for normal chat
         
         # HARD TOKEN LIMIT - Block requests that would be too expensive
         total_chars = len(system_message) + sum(len(str(m.get("content", ""))) for m in messages)
