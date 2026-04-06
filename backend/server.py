@@ -672,7 +672,8 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     system_message = f"""You are Chronicle, a helpful personal assistant with memory.
 
 Be friendly and conversational. Remember what the user tells you.
-{rules_context}{memory_context}{contacts_context}
+Do NOT mention phone calls, text messages, or SMS unless the user specifically asks.
+{rules_context}{memory_context}
 User's name: {current_user['name']}"""
 
     # If App Builder Mode is enabled, switch to coding-focused context
