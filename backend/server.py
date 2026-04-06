@@ -774,8 +774,17 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
                 })
             return ChatResponse(response=f"Done. I've saved that as '{filename}'. You can open it anytime by saying 'open {filename}'.", session_id=session_id)
     
-    # Check for "open [filename]" or "load [filename]"
-    open_match = re.search(r'(?:open|load|get|read|show)(?: file)? ["\']?([a-zA-Z0-9_\-\s]+)["\']?', message_lower)
+    # Check for "open [filename]" - handles variations like "open chronicle", "open file called chronicle", etc.
+    open_patterns = [
+        r'(?:open|load|get|read) (?:the )?(?:file )?(?:called |named )?["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
+        r'(?:open|load|get|read) ["\']?([a-zA-Z0-9_\-]+(?:[\s_][a-zA-Z0-9_\-]+)*)["\']?$',
+    ]
+    open_match = None
+    for pattern in open_patterns:
+        open_match = re.search(pattern, message_lower.strip())
+        if open_match:
+            break
+    
     if open_match and not any(x in message_lower for x in ['show my files', 'list my files', 'what files']):
         filename = open_match.group(1).strip().replace(' ', '_')
         file = await db.user_files.find_one({"user_id": user_id, "filename": filename}, {"_id": 0})
