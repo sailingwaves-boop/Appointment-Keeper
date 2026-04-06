@@ -764,16 +764,20 @@ You are now in coding mode. Help the user build whatever they need."""
         else:
             model = "claude-haiku-4-5"  # Cheaper model for normal chat
         
-        # HARD TOKEN LIMIT - Block requests that would be too expensive
-        total_chars = len(system_message) + sum(len(str(m.get("content", ""))) for m in messages)
-        est_tokens = total_chars // 4
-        MAX_INPUT_TOKENS = 8000  # Hard cap at 8K input tokens (~$0.024 per request max for Sonnet)
-        
-        logger.info(f"Chat request - Model: {model}, Est. tokens: ~{est_tokens}, History msgs: {len(messages)}")
-        
-        if est_tokens > MAX_INPUT_TOKENS:
-            logger.warning(f"BLOCKED: Request too large - {est_tokens} tokens exceeds {MAX_INPUT_TOKENS} limit")
-            raise HTTPException(status_code=413, detail=f"Message too large. Please start a new conversation.")
+        # HARD TOKEN LIMIT - Block requests that would be too expensive (skip for images)
+        has_image = request.image_url is not None
+        if not has_image:
+            total_chars = len(system_message) + sum(len(str(m.get("content", ""))) for m in messages)
+            est_tokens = total_chars // 4
+            MAX_INPUT_TOKENS = 8000  # Hard cap at 8K input tokens
+            
+            logger.info(f"Chat request - Model: {model}, Est. tokens: ~{est_tokens}, History msgs: {len(messages)}")
+            
+            if est_tokens > MAX_INPUT_TOKENS:
+                logger.warning(f"BLOCKED: Request too large - {est_tokens} tokens exceeds {MAX_INPUT_TOKENS} limit")
+                raise HTTPException(status_code=413, detail=f"Message too large. Please start a new conversation.")
+        else:
+            logger.info(f"Chat request with image - Model: {model}, History msgs: {len(messages)}")
         
         response = client.messages.create(
             model=model,
