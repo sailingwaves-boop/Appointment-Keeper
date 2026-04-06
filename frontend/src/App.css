@@ -3571,18 +3571,29 @@ html {
 }
 
 .chat-switcher-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed;
+  top: 60px;
+  left: 10px;
+  right: 10px;
   margin-top: 8px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 12px;
-  min-width: 250px;
-  max-height: 400px;
+  max-width: 350px;
+  max-height: 60vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+@media (min-width: 769px) {
+  .chat-switcher-dropdown {
+    position: absolute;
+    top: 100%;
+    left: auto;
+    right: 0;
+    max-width: 300px;
+  }
 }
 
 .chat-switcher-header {
