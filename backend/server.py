@@ -560,8 +560,7 @@ async def google_token_exchange(request: GoogleTokenRequest):
         "created_at": now
     }
     
-    # Remove old sessions for this user
-    await db.user_sessions.delete_many({"user_id": user_id})
+    # Allow multiple sessions (don't delete old ones) - enables multi-device use
     await db.user_sessions.insert_one(session_doc)
     
     # Get updated user
