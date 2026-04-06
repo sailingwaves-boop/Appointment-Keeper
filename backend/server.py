@@ -787,18 +787,37 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     
     if open_match and not any(x in message_lower for x in ['show my files', 'list my files', 'what files']):
         filename = open_match.group(1).strip().replace(' ', '_')
+        
+        # Try exact match first
         file = await db.user_files.find_one({"user_id": user_id, "filename": filename}, {"_id": 0})
+        
+        if not file:
+            # Try fuzzy match - find files containing the search term
+            all_files = await db.user_files.find({"user_id": user_id}, {"_id": 0}).to_list(50)
+            matching_files = [f for f in all_files if filename.lower() in f['filename'].lower()]
+            
+            if len(matching_files) == 1:
+                # Only one match - open it
+                file = matching_files[0]
+            elif len(matching_files) > 1:
+                # Multiple matches - ask which one
+                file_list = "\n".join([f"• {f['filename']}" for f in matching_files])
+                return ChatResponse(
+                    response=f"I found multiple files matching '{filename}':\n\n{file_list}\n\nWhich one would you like me to open?",
+                    session_id=session_id
+                )
+        
         if file:
             return ChatResponse(
-                response=f"Here's the content of '{filename}':\n\n---\n{file['content']}\n---\n\nWould you like me to continue working on this or make any changes?",
+                response=f"Here's the content of '{file['filename']}':\n\n---\n{file['content']}\n---\n\nWould you like me to continue working on this or make any changes?",
                 session_id=session_id
             )
         else:
-            # List available files
+            # No matches at all
             files = await db.user_files.find({"user_id": user_id}, {"_id": 0, "filename": 1}).to_list(20)
             if files:
                 file_list = ", ".join([f"'{f['filename']}'" for f in files])
-                return ChatResponse(response=f"I couldn't find a file called '{filename}'. Your saved files are: {file_list}", session_id=session_id)
+                return ChatResponse(response=f"I couldn't find a file matching '{filename}'. Your saved files are: {file_list}", session_id=session_id)
             else:
                 return ChatResponse(response=f"I couldn't find a file called '{filename}' and you don't have any saved files yet.", session_id=session_id)
     
