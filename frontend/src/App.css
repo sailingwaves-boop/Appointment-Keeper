@@ -913,6 +913,8 @@ body {
 .message.assistant .message-content {
   background: var(--bg-secondary);
   color: var(--text-primary);
+  padding-bottom: 2.5rem; /* Extra padding for action buttons */
+  min-height: 3rem;
 }
 
 .message-content pre {

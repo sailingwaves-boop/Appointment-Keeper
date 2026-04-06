@@ -859,9 +859,16 @@ const ChatView = () => {
     { label: 'Save this as...', command: 'save this as ', prompt: true },
     { label: 'Open file...', command: 'open ', prompt: true },
     { label: 'Delete file...', command: 'delete file ', prompt: true },
+    { label: 'Hold (paste + hold)', command: '', info: 'Add "hold" at the end of your message to store it' },
   ];
 
   const handleFileCommand = (cmd) => {
+    if (cmd.info) {
+      // Just show info, don't insert command
+      toast.info(cmd.info);
+      setShowFileCommands(false);
+      return;
+    }
     setInput(cmd.command);
     setShowFileCommands(false);
     if (!cmd.prompt) {
