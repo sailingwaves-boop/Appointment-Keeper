@@ -3474,3 +3474,53 @@ body {
   opacity: 0.9;
 }
 
+
+/* File Commands Dropdown */
+.file-commands-wrapper {
+  position: relative;
+}
+
+.file-commands-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 0;
+  min-width: 160px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: 100;
+}
+
+.file-command-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.file-command-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.input-action-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* Prevent page loading scrolled down */
+html, body {
+  scroll-behavior: auto;
+}
+
+html {
+  overflow-x: hidden;
+}

@@ -33,7 +33,9 @@ import {
   Volume2,
   Code,
   Copy,
-  Globe
+  Globe,
+  FolderOpen,
+  ChevronDown
 } from 'lucide-react';
 import './App.css';
 
@@ -850,9 +852,36 @@ const ChatView = () => {
     checkWebSearch();
   }, []);
 
+  const [showFileCommands, setShowFileCommands] = useState(false);
+
+  const fileCommands = [
+    { label: 'Show my files', command: 'show my files' },
+    { label: 'Save this as...', command: 'save this as ', prompt: true },
+    { label: 'Open file...', command: 'open ', prompt: true },
+    { label: 'Delete file...', command: 'delete file ', prompt: true },
+  ];
+
+  const handleFileCommand = (cmd) => {
+    setInput(cmd.command);
+    setShowFileCommands(false);
+    if (!cmd.prompt) {
+      // Auto-send if no additional input needed
+      setTimeout(() => {
+        document.querySelector('[data-testid="send-button"]')?.click();
+      }, 100);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Scroll page to top on mount (fix for page loading scrolled down)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  }, []);
 
   // Load last session on mount
   useEffect(() => {
@@ -1390,6 +1419,32 @@ const ChatView = () => {
           style={{ display: 'none' }}
         />
         
+        {/* File Commands Dropdown */}
+        <div className="file-commands-wrapper">
+          <button 
+            type="button" 
+            className={`input-action-btn ${showFileCommands ? 'active' : ''}`}
+            onClick={() => setShowFileCommands(!showFileCommands)}
+            title="File commands"
+          >
+            <FolderOpen size={20} />
+          </button>
+          {showFileCommands && (
+            <div className="file-commands-dropdown">
+              {fileCommands.map((cmd, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleFileCommand(cmd)}
+                  className="file-command-item"
+                >
+                  {cmd.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
         {/* Camera button */}
         <button 
           type="button" 
@@ -1433,7 +1488,7 @@ const ChatView = () => {
             <X size={20} />
           </button>
         ) : (
-          <button type="submit" disabled={!input.trim() && !selectedFile} data-testid="send-message-btn">
+          <button type="submit" disabled={!input.trim() && !selectedFile} data-testid="send-button">
             <ArrowUp size={20} />
           </button>
         )}
