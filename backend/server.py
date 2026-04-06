@@ -204,6 +204,29 @@ class MemoryItem(BaseModel):
     created_at: str
     updated_at: str
 
+# ============== USER FILES ==============
+
+class UserFile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    filename: str
+    content: str
+    created_at: str
+    updated_at: str
+
+class FileSaveRequest(BaseModel):
+    filename: str
+    content: str
+
+class FileResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    filename: str
+    content: str
+    created_at: str
+    updated_at: str
+
 # ============== SUBSCRIPTION PLANS ==============
 
 SUBSCRIPTION_PLANS = {
@@ -715,6 +738,81 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
     
     user_id = current_user["id"]
     session_id = request.session_id or str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    message_lower = request.message.lower()
+    
+    # ============== FILE COMMANDS ==============
+    
+    # Check for "save this as [filename]" or "save as [filename]"
+    import re
+    save_match = re.search(r'save (?:this )?as ["\']?([a-zA-Z0-9_\-\s]+)["\']?', message_lower)
+    if save_match:
+        filename = save_match.group(1).strip().replace(' ', '_')
+        # Get the last assistant response to save
+        last_conv = await db.conversations.find_one(
+            {"user_id": user_id, "session_id": session_id},
+            {"_id": 0},
+            sort=[("timestamp", -1)]
+        )
+        if last_conv:
+            content = last_conv.get("assistant_response", "")
+            # Save the file
+            existing = await db.user_files.find_one({"user_id": user_id, "filename": filename})
+            if existing:
+                await db.user_files.update_one(
+                    {"id": existing["id"]},
+                    {"$set": {"content": content, "updated_at": now}}
+                )
+            else:
+                await db.user_files.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "filename": filename,
+                    "content": content,
+                    "created_at": now,
+                    "updated_at": now
+                })
+            return ChatResponse(response=f"Done. I've saved that as '{filename}'. You can open it anytime by saying 'open {filename}'.", session_id=session_id)
+    
+    # Check for "open [filename]" or "load [filename]"
+    open_match = re.search(r'(?:open|load|get|read|show)(?: file)? ["\']?([a-zA-Z0-9_\-\s]+)["\']?', message_lower)
+    if open_match and not any(x in message_lower for x in ['show my files', 'list my files', 'what files']):
+        filename = open_match.group(1).strip().replace(' ', '_')
+        file = await db.user_files.find_one({"user_id": user_id, "filename": filename}, {"_id": 0})
+        if file:
+            return ChatResponse(
+                response=f"Here's the content of '{filename}':\n\n---\n{file['content']}\n---\n\nWould you like me to continue working on this or make any changes?",
+                session_id=session_id
+            )
+        else:
+            # List available files
+            files = await db.user_files.find({"user_id": user_id}, {"_id": 0, "filename": 1}).to_list(20)
+            if files:
+                file_list = ", ".join([f"'{f['filename']}'" for f in files])
+                return ChatResponse(response=f"I couldn't find a file called '{filename}'. Your saved files are: {file_list}", session_id=session_id)
+            else:
+                return ChatResponse(response=f"I couldn't find a file called '{filename}' and you don't have any saved files yet.", session_id=session_id)
+    
+    # Check for "show my files" or "list my files" or "what files do I have"
+    if any(phrase in message_lower for phrase in ['show my files', 'list my files', 'what files', 'my files']):
+        files = await db.user_files.find({"user_id": user_id}, {"_id": 0, "filename": 1, "updated_at": 1}).sort("updated_at", -1).to_list(50)
+        if files:
+            file_list = "\n".join([f"• {f['filename']}" for f in files])
+            return ChatResponse(response=f"Here are your saved files:\n\n{file_list}\n\nTo open one, just say 'open [filename]'.", session_id=session_id)
+        else:
+            return ChatResponse(response="You don't have any saved files yet. To save something, ask me to write or explain something, then say 'save this as [filename]'.", session_id=session_id)
+    
+    # Check for "delete file [filename]"
+    delete_match = re.search(r'delete (?:file )?["\']?([a-zA-Z0-9_\-\s]+)["\']?', message_lower)
+    if delete_match and 'delete' in message_lower[:20]:
+        filename = delete_match.group(1).strip().replace(' ', '_')
+        result = await db.user_files.delete_one({"user_id": user_id, "filename": filename})
+        if result.deleted_count > 0:
+            return ChatResponse(response=f"Done. I've deleted the file '{filename}'.", session_id=session_id)
+        else:
+            return ChatResponse(response=f"I couldn't find a file called '{filename}' to delete.", session_id=session_id)
+    
+    # ============== LOAD CONTEXT ==============
     
     # Load user's memory for context
     memories = await db.memories.find({"user_id": user_id}, {"_id": 0}).sort("updated_at", -1).limit(50).to_list(50)
@@ -723,6 +821,13 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
         memory_context = "\n\nUser's stored information:\n"
         for mem in memories:
             memory_context += f"- {mem['key']}: {mem['value']}\n"
+    
+    # Load user's saved files list for context
+    user_files = await db.user_files.find({"user_id": user_id}, {"_id": 0, "filename": 1}).to_list(20)
+    files_context = ""
+    if user_files:
+        files_context = "\n\nUser's saved files: " + ", ".join([f['filename'] for f in user_files])
+        files_context += "\n(User can say 'open [filename]' to access these)"
     
     # Load user's contacts
     contacts = await db.contacts.find({"user_id": user_id}, {"_id": 0}).to_list(50)
@@ -743,11 +848,18 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
         for rule in user_settings["rules"]:
             rules_context += f"- {rule}\n"
     
-    system_message = f"""You are Chronicle, a helpful personal assistant with memory.
+    system_message = f"""You are Chronicle, a helpful personal assistant with memory and file storage.
 
 Be friendly and conversational. Remember what the user tells you.
 Do NOT mention phone calls, text messages, or SMS unless the user specifically asks.
-{rules_context}{memory_context}
+
+FILE COMMANDS THE USER CAN USE:
+- "save this as [name]" - saves your last response as a file
+- "open [name]" - opens a saved file
+- "show my files" - lists all saved files  
+- "delete file [name]" - deletes a file
+
+{rules_context}{memory_context}{files_context}
 User's name: {current_user['name']}"""
 
     # Check if web search is enabled globally in admin settings
@@ -971,6 +1083,72 @@ async def delete_memory(memory_id: str, current_user: dict = Depends(get_current
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Memory not found")
     return {"message": "Memory deleted"}
+
+# ============== USER FILES ==============
+
+@api_router.get("/files")
+async def list_user_files(current_user: dict = Depends(get_current_user)):
+    """List all user's saved files"""
+    files = await db.user_files.find(
+        {"user_id": current_user["id"]}, 
+        {"_id": 0, "id": 1, "filename": 1, "created_at": 1, "updated_at": 1}
+    ).sort("updated_at", -1).to_list(100)
+    return {"files": files}
+
+@api_router.post("/files/save")
+async def save_user_file(data: FileSaveRequest, current_user: dict = Depends(get_current_user)):
+    """Save or update a file"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Check if file exists
+    existing = await db.user_files.find_one({
+        "user_id": current_user["id"],
+        "filename": data.filename.lower().strip()
+    })
+    
+    if existing:
+        # Update existing file
+        await db.user_files.update_one(
+            {"id": existing["id"]},
+            {"$set": {"content": data.content, "updated_at": now}}
+        )
+        return {"message": f"File '{data.filename}' updated", "id": existing["id"]}
+    else:
+        # Create new file
+        file_id = str(uuid.uuid4())
+        file_doc = {
+            "id": file_id,
+            "user_id": current_user["id"],
+            "filename": data.filename.lower().strip(),
+            "content": data.content,
+            "created_at": now,
+            "updated_at": now
+        }
+        await db.user_files.insert_one(file_doc)
+        return {"message": f"File '{data.filename}' saved", "id": file_id}
+
+@api_router.get("/files/{filename}")
+async def get_user_file(filename: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific file by name"""
+    file = await db.user_files.find_one({
+        "user_id": current_user["id"],
+        "filename": filename.lower().strip()
+    }, {"_id": 0})
+    
+    if not file:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
+    return file
+
+@api_router.delete("/files/{filename}")
+async def delete_user_file(filename: str, current_user: dict = Depends(get_current_user)):
+    """Delete a file"""
+    result = await db.user_files.delete_one({
+        "user_id": current_user["id"],
+        "filename": filename.lower().strip()
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
+    return {"message": f"File '{filename}' deleted"}
 
 # ============== VOICE INPUT (WHISPER) ==============
 
