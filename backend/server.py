@@ -57,6 +57,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ============== WEB SEARCH ==============
+
+async def brave_web_search(query: str, count: int = 5) -> str:
+    """Search the web using Brave Search API"""
+    api_key = os.environ.get('BRAVE_SEARCH_API_KEY')
+    if not api_key:
+        logger.warning("BRAVE_SEARCH_API_KEY not set")
+        return ""
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                headers={"X-Subscription-Token": api_key},
+                params={"q": query, "count": count},
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Brave search error: {response.status_code}")
+                return ""
+            
+            data = response.json()
+            results = data.get("web", {}).get("results", [])
+            
+            if not results:
+                return ""
+            
+            # Format results for context
+            search_context = f"\n\n[Web Search Results for: {query}]\n"
+            for i, r in enumerate(results[:5], 1):
+                title = r.get("title", "")
+                desc = r.get("description", "")
+                url = r.get("url", "")
+                search_context += f"{i}. {title}\n   {desc}\n   Source: {url}\n\n"
+            
+            return search_context
+            
+    except Exception as e:
+        logger.error(f"Brave search error: {e}")
+        return ""
+
 # ============== MODELS ==============
 
 class UserCreate(BaseModel):
@@ -98,6 +140,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     image_url: Optional[str] = None
     app_builder_mode: Optional[bool] = False
+    web_search: Optional[bool] = False
 
 class ChatResponse(BaseModel):
     response: str
@@ -675,6 +718,18 @@ Do NOT mention phone calls, text messages, or SMS unless the user specifically a
 {rules_context}{memory_context}
 User's name: {current_user['name']}"""
 
+    # Check if web search is enabled globally in admin settings
+    admin_settings = await db.settings.find_one({"key": "web_search_enabled"}, {"_id": 0})
+    web_search_globally_enabled = admin_settings.get("value", False) if admin_settings else False
+    
+    # Perform web search if enabled
+    web_search_context = ""
+    if request.web_search and web_search_globally_enabled:
+        logger.info(f"Web search enabled for query: {request.message[:50]}...")
+        web_search_context = await brave_web_search(request.message)
+        if web_search_context:
+            system_message += f"\n\n{web_search_context}\nUse the above search results to help answer the user's question. Cite sources when relevant."
+
     # If App Builder Mode is enabled, switch to coding-focused context
     if request.app_builder_mode:
         system_message = f"""You are Chronicle in APP BUILDER MODE. You are Claude Sonnet 4.6, an expert software engineer.
@@ -1166,6 +1221,25 @@ async def admin_set_credit_warning(data: CreditWarningThreshold, admin: dict = D
         upsert=True
     )
     return {"message": f"Credit warning threshold set to {data.threshold}"}
+
+class WebSearchToggle(BaseModel):
+    enabled: bool
+
+@api_router.post("/admin/settings/web-search")
+async def admin_toggle_web_search(data: WebSearchToggle, admin: dict = Depends(require_admin)):
+    """Enable or disable web search globally"""
+    await db.settings.update_one(
+        {"key": "web_search_enabled"},
+        {"$set": {"key": "web_search_enabled", "value": data.enabled}},
+        upsert=True
+    )
+    return {"message": f"Web search {'enabled' if data.enabled else 'disabled'}"}
+
+@api_router.get("/admin/settings/web-search")
+async def admin_get_web_search_status(admin: dict = Depends(require_admin)):
+    """Get web search status"""
+    setting = await db.settings.find_one({"key": "web_search_enabled"}, {"_id": 0})
+    return {"enabled": setting.get("value", False) if setting else False}
 
 # ============== USER SETTINGS/ADMIN PANEL ==============
 

@@ -32,7 +32,8 @@ import {
   Paperclip,
   Volume2,
   Code,
-  Copy
+  Copy,
+  Globe
 } from 'lucide-react';
 import './App.css';
 
@@ -824,11 +825,30 @@ const ChatView = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [appBuilderMode, setAppBuilderMode] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [webSearchAvailable, setWebSearchAvailable] = useState(false);
   const { user } = useAuth();
   const messagesEndRef = React.useRef(null);
   const fileInputRef = React.useRef(null);
   const cameraInputRef = React.useRef(null);
   const abortControllerRef = React.useRef(null);
+
+  // Check if web search is available (admin enabled)
+  useEffect(() => {
+    const checkWebSearch = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/api/admin/settings/web-search`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setWebSearchAvailable(res.data.enabled);
+      } catch (err) {
+        // Not admin or not available
+        setWebSearchAvailable(false);
+      }
+    };
+    checkWebSearch();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1102,7 +1122,8 @@ const ChatView = () => {
         message: userMessage,
         session_id: sessionId,
         image_url: imageUrl,
-        app_builder_mode: appBuilderMode
+        app_builder_mode: appBuilderMode,
+        web_search: webSearchEnabled
       }, {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: abortControllerRef.current.signal
@@ -1198,6 +1219,17 @@ const ChatView = () => {
             <Code size={18} />
             {appBuilderMode ? 'Builder' : 'Chat'}
           </button>
+          {webSearchAvailable && (
+            <button
+              onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+              className={`mode-toggle-btn ${webSearchEnabled ? 'active' : ''}`}
+              title={webSearchEnabled ? 'Web Search ON' : 'Web Search OFF'}
+              data-testid="web-search-toggle"
+            >
+              <Globe size={18} />
+              {webSearchEnabled ? 'Web' : 'Web'}
+            </button>
+          )}
           <button 
             onClick={toggleMemories} 
             className={`memory-toggle-btn ${showMemories ? 'active' : ''}`}
@@ -2583,11 +2615,39 @@ const OwnerAdminView = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
   const [showPhonePanel, setShowPhonePanel] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
     fetchPartners();
+    fetchWebSearchStatus();
   }, []);
+
+  const fetchWebSearchStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/admin/settings/web-search`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setWebSearchEnabled(res.data.enabled);
+    } catch (err) {
+      console.error('Failed to load web search status');
+    }
+  };
+
+  const toggleWebSearch = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/admin/settings/web-search`, 
+        { enabled: !webSearchEnabled },
+        { headers: { 'Authorization': `Bearer ${token}` }}
+      );
+      setWebSearchEnabled(!webSearchEnabled);
+      toast.success(`Web search ${!webSearchEnabled ? 'enabled' : 'disabled'}`);
+    } catch (err) {
+      toast.error('Failed to update web search setting');
+    }
+  };
 
   const fetchDashboard = async () => {
     try {
@@ -2713,6 +2773,28 @@ const OwnerAdminView = () => {
         <div className="stat-card">
           <span className="stat-number">{stats.total_conversations}</span>
           <span className="stat-label">Conversations</span>
+        </div>
+      </div>
+
+      <div className="admin-section">
+        <h3>Feature Toggles</h3>
+        <div className="feature-toggles">
+          <div className="feature-toggle-item">
+            <div className="feature-info">
+              <Globe size={20} />
+              <div>
+                <span className="feature-name">Web Search</span>
+                <span className="feature-desc">Allow users to search the internet</span>
+              </div>
+            </div>
+            <button 
+              onClick={toggleWebSearch}
+              className={`toggle-btn ${webSearchEnabled ? 'active' : ''}`}
+              data-testid="web-search-admin-toggle"
+            >
+              {webSearchEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
         </div>
       </div>
 
