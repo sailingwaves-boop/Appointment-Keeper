@@ -887,15 +887,23 @@ You are now in coding mode. Help the user build whatever they need."""
         }
         await db.conversations.insert_one(conversation_doc)
         
-        # Check if user shared something to remember
+        # Check if user wants to save something to memory
         message_lower = request.message.lower()
-        if any(phrase in message_lower for phrase in ["remember", "my name is", "i am", "i'm", "my email", "my phone", "my address", "i like", "i prefer", "i work"]):
+        memory_triggers = [
+            "lock this in", "store this", "remember this", "keep this", 
+            "add this to memory", "file this", "archive this",
+            "save this", "note this", "write this down",
+            "remember", "my name is", "i am", "i'm", 
+            "my email", "my phone", "my address", 
+            "i like", "i prefer", "i work"
+        ]
+        if any(phrase in message_lower for phrase in memory_triggers):
             memory_doc = {
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
-                "key": "user_shared_info",
+                "key": "saved_info",
                 "value": request.message,
-                "category": "conversation",
+                "category": "user_saved",
                 "created_at": now,
                 "updated_at": now
             }
