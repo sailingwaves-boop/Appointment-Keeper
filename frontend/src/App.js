@@ -1260,13 +1260,6 @@ const ChatView = () => {
     }
   };
 
-  const startNewChat = () => {
-    setMessages([]);
-    setSessionId(null);
-    localStorage.removeItem('chronicle_session_id');
-    clearFile();
-  };
-
   // Memories panel state
   const [showMemories, setShowMemories] = useState(false);
   const [memories, setMemories] = useState([]);
