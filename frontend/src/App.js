@@ -837,17 +837,29 @@ const ChatView = () => {
   const cameraInputRef = React.useRef(null);
   const abortControllerRef = React.useRef(null);
 
-  // Force scroll to top on mount
+  // Force scroll to top on mount - use multiple methods
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Immediate scroll
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
-    // Also try after a short delay for any async rendering
+    
+    // After render
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    
+    // After short delay
     setTimeout(() => {
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       document.body.scrollTop = 0;
       document.documentElement.scrollTop = 0;
-    }, 100);
+    }, 50);
+    
+    // After longer delay for slow renders
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 200);
   }, []);
 
   // Fetch chat sessions for switcher
