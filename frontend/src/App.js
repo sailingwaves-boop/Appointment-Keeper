@@ -1008,6 +1008,54 @@ const ChatView = () => {
     }, 100);
   }, []);
 
+  // Refresh session when window gains focus (helps with multi-device sync)
+  useEffect(() => {
+    const handleFocus = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      try {
+        const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const sessions = sessionsRes.data.sessions;
+        
+        if (sessions && sessions.length > 0) {
+          const latestSessionId = sessions[0]._id;
+          
+          // Only reload if different session
+          if (latestSessionId !== sessionId) {
+            const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${latestSessionId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const conversations = historyRes.data.conversations;
+            
+            if (conversations && conversations.length > 0) {
+              const loadedMessages = [];
+              conversations.reverse().forEach(conv => {
+                loadedMessages.push({ role: 'user', content: conv.user_message });
+                loadedMessages.push({ role: 'assistant', content: conv.assistant_response });
+              });
+              setMessages(loadedMessages);
+              setSessionId(latestSessionId);
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Focus refresh failed');
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') handleFocus();
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [sessionId]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -1383,7 +1431,10 @@ const ChatView = () => {
           </div>
           <button onClick={startNewChat} className="new-chat-btn" data-testid="new-chat-btn">
             <Plus size={18} />
-            New Chat
+            New
+          </button>
+          <button onClick={() => window.location.reload()} className="mode-toggle-btn" title="Refresh to sync">
+            Sync
           </button>
         </div>
       </div>
