@@ -1008,43 +1008,6 @@ const ChatView = () => {
     }, 100);
   }, []);
 
-  // Refresh session when window gains focus (helps with multi-device sync)
-  useEffect(() => {
-    const handleFocus = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      try {
-        const sessionsRes = await axios.get(`${API_URL}/api/chat/sessions`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const sessions = sessionsRes.data.sessions;
-        
-        if (sessions && sessions.length > 0 && sessions[0]._id !== sessionId) {
-          const historyRes = await axios.get(`${API_URL}/api/chat/history?session_id=${sessions[0]._id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const conversations = historyRes.data.conversations;
-          
-          if (conversations && conversations.length > 0) {
-            const loadedMessages = [];
-            conversations.reverse().forEach(conv => {
-              loadedMessages.push({ role: 'user', content: conv.user_message });
-              loadedMessages.push({ role: 'assistant', content: conv.assistant_response });
-            });
-            setMessages(loadedMessages);
-            setSessionId(sessions[0]._id);
-          }
-        }
-      } catch (err) {
-        console.log('Focus refresh failed');
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [sessionId]);
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
