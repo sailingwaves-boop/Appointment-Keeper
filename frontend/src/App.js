@@ -1631,19 +1631,13 @@ const ChatView = () => {
           <Paperclip size={20} />
         </button>
         
-        {/* Voice input */}
-        <VoiceInput 
-          onTranscription={(text) => setInput(prev => prev + text)} 
-          disabled={sending}
-        />
-        
         {/* Text input */}
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type or speak..."
+          placeholder="Type a message..."
           disabled={false}
           data-testid="chat-input"
         />
