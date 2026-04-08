@@ -3606,6 +3606,15 @@ const Dashboard = () => {
         </div>
       </aside>
 
+      {/* Overlay to close sidebar when clicking outside */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <main className="main-content">
         {showTrialExpiredBanner && (
           <div className="trial-banner trial-expired" data-testid="trial-expired-banner">
