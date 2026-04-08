@@ -3658,6 +3658,35 @@ body {
   background: var(--bg-tertiary);
 }
 
+.files-list-dropdown {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.files-list-header {
+  padding: 10px 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.file-link {
+  color: var(--accent) !important;
+  cursor: pointer;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+  background: var(--bg-tertiary);
+}
+
+.no-files {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .input-action-btn.active {
   background: var(--primary);
   color: white;

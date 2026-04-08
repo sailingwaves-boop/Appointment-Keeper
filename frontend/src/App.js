@@ -933,18 +933,38 @@ const ChatView = () => {
   }, []);
 
   const [showFileCommands, setShowFileCommands] = useState(false);
+  const [userFiles, setUserFiles] = useState([]);
+  const [showFilesList, setShowFilesList] = useState(false);
 
   const fileCommands = [
-    { label: 'Show my files', command: 'show my files' },
+    { label: 'Show my files', action: 'showFiles' },
     { label: 'Save this as...', command: 'save this as ', prompt: true },
     { label: 'Open file...', command: 'open ', prompt: true },
     { label: 'Delete file...', command: 'delete file ', prompt: true },
     { label: 'Hold (paste + hold)', command: '', info: 'Add "hold" at the end of your message to store it' },
   ];
 
+  const fetchUserFiles = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/api/files`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setUserFiles(res.data.files || []);
+    } catch (err) {
+      console.error('Failed to fetch files');
+      setUserFiles([]);
+    }
+  };
+
   const handleFileCommand = (cmd) => {
+    if (cmd.action === 'showFiles') {
+      fetchUserFiles();
+      setShowFilesList(true);
+      setShowFileCommands(false);
+      return;
+    }
     if (cmd.info) {
-      // Just show info, don't insert command
       toast.info(cmd.info);
       setShowFileCommands(false);
       return;
@@ -952,11 +972,18 @@ const ChatView = () => {
     setInput(cmd.command);
     setShowFileCommands(false);
     if (!cmd.prompt) {
-      // Auto-send if no additional input needed
       setTimeout(() => {
         document.querySelector('[data-testid="send-button"]')?.click();
       }, 100);
     }
+  };
+
+  const handleOpenFile = (filename) => {
+    setInput(`open ${filename}`);
+    setShowFilesList(false);
+    setTimeout(() => {
+      document.querySelector('[data-testid="send-button"]')?.click();
+    }, 100);
   };
 
   const scrollToBottom = () => {
@@ -1630,6 +1657,34 @@ const ChatView = () => {
                   {cmd.label}
                 </button>
               ))}
+            </div>
+          )}
+          
+          {/* Files list dropdown */}
+          {showFilesList && (
+            <div className="file-commands-dropdown files-list-dropdown">
+              <button 
+                type="button" 
+                className="file-commands-close"
+                onClick={() => setShowFilesList(false)}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="files-list-header">My Files</div>
+              {userFiles.length === 0 ? (
+                <div className="file-command-item no-files">No files saved yet</div>
+              ) : (
+                userFiles.map((file, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleOpenFile(file.filename)}
+                    className="file-command-item file-link"
+                  >
+                    {file.filename}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
