@@ -468,6 +468,12 @@ const AuthPage = () => {
           </button>
         </p>
 
+        <div className="auth-footer-links">
+          <a href="/privacy">Privacy Policy</a>
+          <span>•</span>
+          <a href="/terms">Terms of Service</a>
+        </div>
+
         <InstallButton />
       </div>
 

@@ -3683,3 +3683,26 @@ html {
   color: var(--text-secondary);
   font-size: 14px;
 }
+
+/* Auth footer links */
+.auth-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 1rem;
+  font-size: 12px;
+}
+
+.auth-footer-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.auth-footer-links a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.auth-footer-links span {
+  color: var(--text-secondary);
+}
