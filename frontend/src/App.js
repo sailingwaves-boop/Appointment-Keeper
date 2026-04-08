@@ -1642,10 +1642,11 @@ const ChatView = () => {
             <FolderOpen size={20} />
           </button>
           {showFileCommands && (
-            <div className="file-commands-dropdown" onClick={(e) => e.stopPropagation()}>
+            <div className="file-commands-dropdown" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
               <button 
                 type="button" 
                 className="file-commands-close"
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setShowFileCommands(false); }}
                 onClick={(e) => { e.stopPropagation(); setShowFileCommands(false); }}
               >
                 <ChevronLeft size={18} />
@@ -1654,6 +1655,7 @@ const ChatView = () => {
                 <button
                   key={idx}
                   type="button"
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleFileCommand(cmd); }}
                   onClick={(e) => { e.stopPropagation(); handleFileCommand(cmd); }}
                   className="file-command-item"
                 >

@@ -3880,9 +3880,8 @@ html {
 /* Sidebar toggle indicators - | + */
 .sidebar-toggle-indicators {
   position: fixed;
-  top: 50%;
+  bottom: 100px;
   left: 220px;
-  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -3903,16 +3902,7 @@ html {
 
 @media (max-width: 768px) {
   .sidebar-toggle-indicators {
-    display: none;
-  }
-  
-  .sidebar-toggle-indicators.mobile-visible {
-    display: flex;
-    left: 220px;
-  }
-  
-  .sidebar-toggle-indicators.mobile-visible.collapsed {
-    left: 0;
+    display: none !important;
   }
 }
 
