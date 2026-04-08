@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chronicle-v7';
+const CACHE_NAME = 'chronicle-v8';
 const urlsToCache = [
   '/',
   '/index.html'
@@ -9,6 +9,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   );
+  // Notify clients that a new version is available
   self.skipWaiting();
 });
 
@@ -31,7 +32,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  // Delete all old caches
+  // Delete all old caches and notify clients
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -42,6 +43,13 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+      // Notify all clients about the update
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'UPDATE_AVAILABLE' });
+        });
+      });
     })
   );
   self.clients.claim();

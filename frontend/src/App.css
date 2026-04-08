@@ -3728,30 +3728,159 @@ html {
   color: var(--text-secondary);
 }
 
-/* Sidebar close button */
+/* Sidebar close button - large swipeable arrow */
 .sidebar-close-btn {
   position: absolute;
-  top: 12px;
-  right: -40px;
-  width: 36px;
-  height: 36px;
+  top: 50%;
+  right: -28px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 80px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--text-primary);
   z-index: 1001;
+  transition: background 0.2s, width 0.2s;
+}
+
+.sidebar-close-btn svg {
+  width: 24px;
+  height: 24px;
 }
 
 .sidebar-close-btn:hover {
   background: var(--bg-tertiary);
+  width: 32px;
+}
+
+.sidebar-close-btn:active {
+  background: var(--accent);
 }
 
 @media (min-width: 769px) {
   .sidebar-close-btn {
     display: none;
   }
+}
+
+
+/* Voice Clone Credit Gate */
+.clone-cost-notice {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+
+.credit-confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.credit-confirm-content {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.credit-confirm-content h4 {
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+}
+
+.credit-confirm-content p {
+  margin: 8px 0;
+  color: var(--text-secondary);
+}
+
+.credit-confirm-content strong {
+  color: var(--accent);
+}
+
+.credit-confirm-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.credit-confirm-buttons button {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.credit-confirm-buttons .cancel-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.credit-confirm-buttons .confirm-btn {
+  background: var(--accent);
+
+/* Update notification banner */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 2000;
+  font-weight: 500;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.update-banner .refresh-btn {
+  background: white;
+  color: #4F46E5;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.update-banner .refresh-btn:hover {
+  transform: scale(1.05);
+}
+
+.update-banner + .mobile-menu-btn {
+  top: 60px;
+}
+
+  color: white;
+}
+
+.record-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

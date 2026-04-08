@@ -2448,13 +2448,18 @@ const SubscriptionSuccess = () => {
 };
 
 // Voice Clone Section Component
-const VoiceCloneSection = ({ onVoiceCloned }) => {
+const VOICE_CLONE_COST = 75;
+
+const VoiceCloneSection = ({ onVoiceCloned, userCredits, onCreditsNeeded }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
   const [sampleText, setSampleText] = useState('');
   const [instructions, setInstructions] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+
+  const hasEnoughCredits = userCredits >= VOICE_CLONE_COST;
 
   useEffect(() => {
     fetchSampleText();
@@ -2468,6 +2473,20 @@ const VoiceCloneSection = ({ onVoiceCloned }) => {
     } catch (err) {
       console.error('Failed to fetch sample text');
     }
+  };
+
+  const handleStartClone = () => {
+    if (!hasEnoughCredits) {
+      toast.error(`You need ${VOICE_CLONE_COST} credits to clone your voice. You have ${userCredits}.`);
+      if (onCreditsNeeded) onCreditsNeeded();
+      return;
+    }
+    setShowConfirm(true);
+  };
+
+  const confirmAndRecord = () => {
+    setShowConfirm(false);
+    startRecording();
   };
 
   const startRecording = async () => {
@@ -2528,11 +2547,27 @@ const VoiceCloneSection = ({ onVoiceCloned }) => {
     <div className="settings-section voice-clone-section">
       <h3><Mic size={20} /> Clone Your Voice</h3>
       <p className="section-desc">Record your voice to create a personalized AI voice clone</p>
+      <p className="clone-cost-notice">Cost: {VOICE_CLONE_COST} credits (You have: {userCredits})</p>
       
       {sampleText && (
         <div className="sample-text-box">
           <p className="sample-instructions">{instructions}</p>
           <p className="sample-text">"{sampleText}"</p>
+        </div>
+      )}
+
+      {showConfirm && (
+        <div className="credit-confirm-modal">
+          <div className="credit-confirm-content">
+            <h4>Confirm Voice Clone</h4>
+            <p>This will deduct <strong>{VOICE_CLONE_COST} credits</strong> from your balance.</p>
+            <p>Your balance: {userCredits} credits</p>
+            <p>After: {userCredits - VOICE_CLONE_COST} credits</p>
+            <div className="credit-confirm-buttons">
+              <button onClick={() => setShowConfirm(false)} className="cancel-btn">Cancel</button>
+              <button onClick={confirmAndRecord} className="confirm-btn">Confirm & Record</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2548,9 +2583,13 @@ const VoiceCloneSection = ({ onVoiceCloned }) => {
             Stop Recording
           </button>
         ) : (
-          <button onClick={startRecording} className="record-btn" data-testid="start-recording-btn">
+          <button 
+            onClick={handleStartClone} 
+            className={`record-btn ${!hasEnoughCredits ? 'disabled' : ''}`}
+            data-testid="start-recording-btn"
+          >
             <Mic size={20} />
-            Start Recording
+            {hasEnoughCredits ? 'Start Recording' : `Need ${VOICE_CLONE_COST} Credits`}
           </button>
         )}
       </div>
@@ -2766,7 +2805,11 @@ const UserSettingsView = () => {
         </select>
       </div>
 
-      <VoiceCloneSection onVoiceCloned={fetchVoices} />
+      <VoiceCloneSection 
+        onVoiceCloned={fetchVoices} 
+        userCredits={credits}
+        onCreditsNeeded={() => toast.info('Go to Subscription to add more credits')}
+      />
 
       <div className="settings-section">
         <h3>Smart Home (Home Assistant)</h3>
@@ -3284,6 +3327,7 @@ const ElevenLabsCallSection = ({ phoneNumber }) => {
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -3291,6 +3335,34 @@ const Dashboard = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Listen for service worker updates
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'UPDATE_AVAILABLE') {
+          setUpdateAvailable(true);
+        }
+      });
+
+      // Check for updates periodically
+      const checkForUpdates = async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          registration.update();
+        }
+      };
+
+      // Check every 5 minutes
+      const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const handleRefresh = () => {
+    window.location.reload(true);
+  };
 
   const handleLogout = () => {
     logout();
@@ -3334,6 +3406,12 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      {updateAvailable && (
+        <div className="update-banner" data-testid="update-banner">
+          <span>An update is available!</span>
+          <button onClick={handleRefresh} className="refresh-btn">Refresh Now</button>
+        </div>
+      )}
       <button 
         className="mobile-menu-btn"
         onClick={() => setSidebarOpen(!sidebarOpen)}

@@ -1851,12 +1851,24 @@ async def text_to_speech(
 class VoiceCloneRequest(BaseModel):
     name: str = "My Voice"
 
+VOICE_CLONE_CREDIT_COST = 75
+
 @api_router.post("/voice/clone")
 async def clone_voice(
     audio: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Clone user's voice from audio sample"""
+    """Clone user's voice from audio sample - costs 75 credits"""
+    # Check user has enough credits
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "credits": 1})
+    user_credits = user.get("credits", 0) if user else 0
+    
+    if user_credits < VOICE_CLONE_CREDIT_COST:
+        raise HTTPException(
+            status_code=402, 
+            detail=f"Insufficient credits. Voice cloning requires {VOICE_CLONE_CREDIT_COST} credits. You have {user_credits}."
+        )
+    
     try:
         eleven_client = ElevenLabs(api_key=os.environ.get('ELEVENLABS_API_KEY'))
         
@@ -1894,6 +1906,12 @@ async def clone_voice(
         # Clean up temp file
         os.unlink(temp_path)
         
+        # Deduct credits AFTER successful clone
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$inc": {"credits": -VOICE_CLONE_CREDIT_COST}}
+        )
+        
         # Save voice ID to database
         await db.user_voices.update_one(
             {"user_id": current_user["id"]},
@@ -1916,9 +1934,12 @@ async def clone_voice(
         return {
             "success": True,
             "voice_id": voice.voice_id,
-            "message": "Voice cloned successfully! It's now set as your default voice."
+            "message": f"Voice cloned successfully! {VOICE_CLONE_CREDIT_COST} credits deducted. It's now set as your default voice.",
+            "credits_used": VOICE_CLONE_CREDIT_COST
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Voice clone error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to clone voice: {str(e)}")
