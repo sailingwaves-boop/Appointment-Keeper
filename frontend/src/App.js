@@ -3425,9 +3425,22 @@ const ElevenLabsCallSection = ({ phoneNumber }) => {
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Check if mobile
+  const isMobile = () => window.innerWidth <= 768;
+
+  // Toggle sidebar - different behavior for mobile vs desktop
+  const toggleSidebar = () => {
+    if (isMobile()) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
+  };
 
   // Scroll to top on mount
   useEffect(() => {
@@ -3511,18 +3524,18 @@ const Dashboard = () => {
         </div>
       )}
       <button 
-        className="mobile-menu-btn"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className={`mobile-menu-btn ${!sidebarCollapsed ? 'sidebar-visible' : ''}`}
+        onClick={toggleSidebar}
         data-testid="mobile-menu-btn"
       >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        {(sidebarOpen || !sidebarCollapsed) ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <button 
           className="sidebar-close-btn"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close menu"
+          onClick={toggleSidebar}
+          aria-label="Toggle menu"
         >
           <ChevronLeft size={24} />
         </button>
@@ -3615,7 +3628,7 @@ const Dashboard = () => {
         />
       )}
 
-      <main className="main-content">
+      <main className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {showTrialExpiredBanner && (
           <div className="trial-banner trial-expired" data-testid="trial-expired-banner">
             <div className="trial-banner-content">
