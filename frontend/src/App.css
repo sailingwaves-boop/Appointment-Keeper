@@ -738,6 +738,19 @@ body {
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
+/* Builder mode visual indicator */
+.chat-view.builder-mode {
+  border-left: 3px solid #8b5cf6;
+}
+
+.chat-view.builder-mode .chat-header {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+}
+
+.chat-view.builder-mode .chat-header h2 {
+  color: #a78bfa;
+}
+
 .memory-toggle-btn {
   width: 36px;
   height: 36px;

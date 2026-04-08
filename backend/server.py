@@ -957,8 +957,14 @@ CODING GUIDELINES:
 - Consider error handling and edge cases
 - If the user's request is vague, ask clarifying questions
 
-You still have access to the user's memory and context:
-{rules_context}{memory_context}
+FILE COMMANDS THE USER CAN USE:
+- "save this as [name]" - saves your last response as a file
+- "open [name]" - opens a saved file
+- "show my files" - lists all saved files  
+- "delete file [name]" - deletes a file
+
+You still have access to the user's memory, context, and files:
+{rules_context}{memory_context}{files_context}
 User's name: {current_user['name']}
 
 You are now in coding mode. Help the user build whatever they need."""
@@ -1018,11 +1024,12 @@ You are now in coding mode. Help the user build whatever they need."""
         client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
         
         # Use Haiku for normal chat (cheaper), Sonnet for App Builder Mode (smarter)
-        # Using aliases so they auto-update to latest versions
         if request.app_builder_mode:
-            model = "claude-sonnet-4-6"  # Smart model for coding
+            model = "claude-sonnet-4-20250514"  # Smart model for coding
+            logger.info(f"APP BUILDER MODE: Using Sonnet for user {current_user['email']}")
         else:
-            model = "claude-haiku-4-5"  # Cheaper model for normal chat
+            model = "claude-haiku-4-5-20251001"  # Cheaper model for normal chat
+            logger.info(f"CHAT MODE: Using Haiku for user {current_user['email']}")
         
         # HARD TOKEN LIMIT - Block requests that would be too expensive (skip for images)
         has_image = request.image_url is not None

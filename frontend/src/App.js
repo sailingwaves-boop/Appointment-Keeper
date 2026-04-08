@@ -1403,14 +1403,17 @@ const ChatView = () => {
   };
 
   return (
-    <div className="chat-view">
+    <div className={`chat-view ${appBuilderMode ? 'builder-mode' : ''}`}>
       <div className="chat-header">
-        <h2>Chat with Chronicle</h2>
+        <h2>{appBuilderMode ? 'Builder Mode' : 'Chat with Chronicle'}</h2>
         <div className="chat-header-actions">
           <button
-            onClick={() => setAppBuilderMode(!appBuilderMode)}
+            onClick={() => {
+              setAppBuilderMode(!appBuilderMode);
+              toast.success(appBuilderMode ? 'Switched to Chat Mode' : 'Switched to Builder Mode');
+            }}
             className={`mode-toggle-btn ${appBuilderMode ? 'active' : ''}`}
-            title={appBuilderMode ? 'App Builder Mode ON' : 'App Builder Mode OFF'}
+            title={appBuilderMode ? 'Click to switch to Chat Mode' : 'Click to switch to Builder Mode'}
             data-testid="app-builder-toggle"
           >
             <Code size={18} />
