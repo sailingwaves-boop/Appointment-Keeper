@@ -1520,9 +1520,15 @@ async def admin_toggle_web_search(data: WebSearchToggle, admin: dict = Depends(r
 
 @api_router.get("/admin/settings/web-search")
 async def admin_get_web_search_status(admin: dict = Depends(require_admin)):
-    """Get web search status"""
+    """Get web search status (admin only)"""
     setting = await db.settings.find_one({"key": "web_search_enabled"}, {"_id": 0})
     return {"enabled": setting.get("value", False) if setting else False}
+
+@api_router.get("/settings/web-search-available")
+async def get_web_search_available(current_user: dict = Depends(get_current_user)):
+    """Check if web search is available for users"""
+    setting = await db.settings.find_one({"key": "web_search_enabled"}, {"_id": 0})
+    return {"available": setting.get("value", False) if setting else False}
 
 # ============== USER SETTINGS/ADMIN PANEL ==============
 

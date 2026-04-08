@@ -1720,10 +1720,17 @@ body {
     overflow-x: hidden;
     contain: layout style paint;
     background: var(--bg-primary);
+    padding-left: 0;
+    padding-right: 0.5rem;
+  }
+  
+  .message.user {
+    justify-content: flex-end;
+    padding-right: 0.5rem;
   }
 
   .message-content {
-    max-width: calc(100% - 45px);
+    max-width: calc(100% - 50px);
     word-break: break-word;
     overflow-wrap: break-word;
     background: var(--bg-secondary);
@@ -3719,4 +3726,32 @@ html {
 
 .auth-footer-links span {
   color: var(--text-secondary);
+}
+
+/* Sidebar close button */
+.sidebar-close-btn {
+  position: absolute;
+  top: 12px;
+  right: -40px;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  z-index: 1001;
+}
+
+.sidebar-close-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+@media (min-width: 769px) {
+  .sidebar-close-btn {
+    display: none;
+  }
 }

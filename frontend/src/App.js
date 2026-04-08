@@ -35,7 +35,8 @@ import {
   Copy,
   Globe,
   FolderOpen,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft
 } from 'lucide-react';
 import './App.css';
 
@@ -915,17 +916,16 @@ const ChatView = () => {
     setShowChatSwitcher(false);
   };
 
-  // Check if web search is available (admin enabled)
+  // Check if web search is available (enabled by admin)
   useEffect(() => {
     const checkWebSearch = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/api/admin/settings/web-search`, {
+        const res = await axios.get(`${API_URL}/api/settings/web-search-available`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        setWebSearchAvailable(res.data.enabled);
+        setWebSearchAvailable(res.data.available);
       } catch (err) {
-        // Not admin or not available
         setWebSearchAvailable(false);
       }
     };
@@ -3343,6 +3343,13 @@ const Dashboard = () => {
       </button>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <button 
+          className="sidebar-close-btn"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close menu"
+        >
+          <ChevronLeft size={24} />
+        </button>
         <div className="sidebar-header">
           <Brain size={32} />
           <h1>Chronicle</h1>
