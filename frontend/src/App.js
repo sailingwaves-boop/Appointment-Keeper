@@ -1642,11 +1642,11 @@ const ChatView = () => {
             <FolderOpen size={20} />
           </button>
           {showFileCommands && (
-            <div className="file-commands-dropdown">
+            <div className="file-commands-dropdown" onClick={(e) => e.stopPropagation()}>
               <button 
                 type="button" 
                 className="file-commands-close"
-                onClick={() => setShowFileCommands(false)}
+                onClick={(e) => { e.stopPropagation(); setShowFileCommands(false); }}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -1654,7 +1654,7 @@ const ChatView = () => {
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => handleFileCommand(cmd)}
+                  onClick={(e) => { e.stopPropagation(); handleFileCommand(cmd); }}
                   className="file-command-item"
                 >
                   {cmd.label}
@@ -1665,11 +1665,11 @@ const ChatView = () => {
           
           {/* Files list dropdown */}
           {showFilesList && (
-            <div className="file-commands-dropdown files-list-dropdown">
+            <div className="file-commands-dropdown files-list-dropdown" onClick={(e) => e.stopPropagation()}>
               <button 
                 type="button" 
                 className="file-commands-close"
-                onClick={() => setShowFilesList(false)}
+                onClick={(e) => { e.stopPropagation(); setShowFilesList(false); }}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -1681,7 +1681,7 @@ const ChatView = () => {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleOpenFile(file.filename)}
+                    onClick={(e) => { e.stopPropagation(); handleOpenFile(file.filename); }}
                     className="file-command-item file-link"
                   >
                     {file.filename}

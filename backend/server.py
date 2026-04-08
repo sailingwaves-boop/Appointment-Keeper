@@ -841,8 +841,19 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
                 )
         
         if file:
+            file_response = f"Here's the content of '{file['filename']}':\n\n---\n{file['content']}\n---\n\nWould you like me to continue working on this or make any changes?"
+            
+            # SAVE to conversation history so Claude can reference it later
+            await db.conversations.insert_one({
+                "user_id": user_id,
+                "session_id": session_id,
+                "user_message": request.message,
+                "assistant_response": file_response,
+                "timestamp": now
+            })
+            
             return ChatResponse(
-                response=f"Here's the content of '{file['filename']}':\n\n---\n{file['content']}\n---\n\nWould you like me to continue working on this or make any changes?",
+                response=file_response,
                 session_id=session_id
             )
         else:
@@ -859,7 +870,18 @@ async def chat(request: ChatRequest, current_user: dict = Depends(get_current_us
         files = await db.user_files.find({"user_id": user_id}, {"_id": 0, "filename": 1, "updated_at": 1}).sort("updated_at", -1).to_list(50)
         if files:
             file_list = "\n".join([f"• {f['filename']}" for f in files])
-            return ChatResponse(response=f"Here are your saved files:\n\n{file_list}\n\nTo open one, just say 'open [filename]'.", session_id=session_id)
+            files_response = f"Here are your saved files:\n\n{file_list}\n\nTo open one, just say 'open [filename]'."
+            
+            # Save to conversation history
+            await db.conversations.insert_one({
+                "user_id": user_id,
+                "session_id": session_id,
+                "user_message": request.message,
+                "assistant_response": files_response,
+                "timestamp": now
+            })
+            
+            return ChatResponse(response=files_response, session_id=session_id)
         else:
             return ChatResponse(response="You don't have any saved files yet. To save something, ask me to write or explain something, then say 'save this as [filename]'.", session_id=session_id)
     
