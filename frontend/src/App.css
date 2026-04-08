@@ -1679,6 +1679,9 @@ body {
     max-width: 100%;
     width: 100%;
     overflow-x: hidden;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .chat-header {
@@ -1707,6 +1710,8 @@ body {
   .messages-container {
     padding: 0.75rem;
     overflow-x: hidden;
+    flex: 1 0 auto;
+    min-height: 0;
   }
 
   .message {
