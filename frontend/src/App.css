@@ -848,6 +848,8 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   background: var(--bg-primary);
+  position: relative;
+  z-index: 1;
 }
 
 .empty-chat {
@@ -893,6 +895,9 @@ body {
   gap: 1rem;
   max-width: 100%;
   width: 100%;
+  position: relative;
+  z-index: 2;
+  background: var(--bg-primary);
 }
 
 .message.user {

@@ -1016,7 +1016,10 @@ const ChatView = () => {
 
   // Refresh session when window gains focus (helps with multi-device sync)
   useEffect(() => {
+    let isMounted = true;
+    
     const handleFocus = async () => {
+      if (!isMounted) return;
       const token = localStorage.getItem('token');
       if (!token) return;
       
@@ -1026,7 +1029,7 @@ const ChatView = () => {
         });
         const sessions = sessionsRes.data.sessions;
         
-        if (sessions && sessions.length > 0) {
+        if (sessions && sessions.length > 0 && isMounted) {
           const latestSessionId = sessions[0]._id;
           
           // Only reload if different session
@@ -1036,7 +1039,7 @@ const ChatView = () => {
             });
             const conversations = historyRes.data.conversations;
             
-            if (conversations && conversations.length > 0) {
+            if (conversations && conversations.length > 0 && isMounted) {
               const loadedMessages = [];
               conversations.reverse().forEach(conv => {
                 loadedMessages.push({ role: 'user', content: conv.user_message });
@@ -1052,13 +1055,17 @@ const ChatView = () => {
       }
     };
     
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'visible') handleFocus();
-    });
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
     
     return () => {
+      isMounted = false;
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [sessionId]);
 
