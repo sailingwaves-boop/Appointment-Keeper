@@ -2890,12 +2890,33 @@ const OwnerAdminView = () => {
   const [smsMessage, setSmsMessage] = useState('');
   const [showPhonePanel, setShowPhonePanel] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [usageStats, setUsageStats] = useState(null);
+  const [selectedUserUsage, setSelectedUserUsage] = useState(null);
 
   useEffect(() => {
     fetchDashboard();
     fetchPartners();
     fetchWebSearchStatus();
+    fetchUsageStats();
   }, []);
+
+  const fetchUsageStats = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/usage`);
+      setUsageStats(res.data);
+    } catch (err) {
+      console.error('Failed to load usage stats');
+    }
+  };
+
+  const fetchUserUsage = async (userId) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/admin/usage/user/${userId}`);
+      setSelectedUserUsage(res.data);
+    } catch (err) {
+      console.error('Failed to load user usage');
+    }
+  };
 
   const fetchWebSearchStatus = async () => {
     try {
@@ -3225,6 +3246,83 @@ const OwnerAdminView = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* API Usage Tracking Section */}
+      <div className="admin-section">
+        <h3>API Usage & Costs</h3>
+        {usageStats ? (
+          <div className="usage-tracking">
+            <div className="usage-summary">
+              <div className="usage-stat-card">
+                <span className="usage-stat-value">${(usageStats.total_cost_cents / 100).toFixed(2)}</span>
+                <span className="usage-stat-label">Total Cost</span>
+              </div>
+              <div className="usage-stat-card">
+                <span className="usage-stat-value">{usageStats.total_calls}</span>
+                <span className="usage-stat-label">Total API Calls</span>
+              </div>
+              <div className="usage-stat-card">
+                <span className="usage-stat-value">{usageStats.calls_last_24h}</span>
+                <span className="usage-stat-label">Last 24h</span>
+              </div>
+            </div>
+            
+            <div className="usage-by-api">
+              <h4>By API</h4>
+              <div className="api-usage-grid">
+                {Object.entries(usageStats.by_api || {}).map(([api, data]) => (
+                  <div key={api} className="api-usage-item">
+                    <span className="api-name">{api}</span>
+                    <span className="api-calls">{data.calls} calls</span>
+                    <span className="api-cost">${(data.cost_cents / 100).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="top-users-usage">
+              <h4>Top Users by Cost</h4>
+              <div className="top-users-list">
+                {(usageStats.top_users || []).map((u, i) => (
+                  <div key={u._id} className="top-user-item" onClick={() => fetchUserUsage(u._id)}>
+                    <span className="top-user-rank">#{i + 1}</span>
+                    <span className="top-user-email">{u.email || u.name || 'Unknown'}</span>
+                    <span className="top-user-cost">${(u.total_cost_cents / 100).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedUserUsage && (
+              <div className="user-usage-detail">
+                <h4>User Usage Detail</h4>
+                <button className="close-usage-detail" onClick={() => setSelectedUserUsage(null)}>
+                  <X size={16} />
+                </button>
+                <div className="user-usage-by-api">
+                  {Object.entries(selectedUserUsage.by_api || {}).map(([api, data]) => (
+                    <div key={api} className="user-api-item">
+                      <span>{api}: {data.calls} calls, ${(data.cost_cents / 100).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="user-recent-logs">
+                  <h5>Recent Activity</h5>
+                  {(selectedUserUsage.recent_logs || []).slice(0, 5).map((log, i) => (
+                    <div key={i} className="log-item">
+                      <span className="log-api">{log.api_name}</span>
+                      <span className="log-details">{log.details}</span>
+                      <span className="log-cost">${(log.cost_cents / 100).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p>Loading usage data...</p>
+        )}
       </div>
 
       <ElevenLabsCallSection phoneNumber={phoneNumber} />

@@ -48,6 +48,12 @@ Chronicle is a personal AI assistant SaaS application with persistent memory acr
 - [x] Admin/Partner bypass for SMS/call credits
 - [x] Admin panel for user management
 - [x] User credits management
+- [x] **API Usage Tracking System**
+  - Logs all API calls (Anthropic, Whisper, ElevenLabs TTS)
+  - Tracks tokens used and cost in cents
+  - Shows total cost, calls, and last 24h activity
+  - Top users by cost ranking
+  - Per-user usage detail view
 
 ### Mobile UX
 - [x] Large sidebar close arrow (swipeable chevron)

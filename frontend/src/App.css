@@ -3884,3 +3884,178 @@ html {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+
+/* Admin Usage Tracking */
+.usage-tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.usage-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.usage-stat-card {
+  background: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usage-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.usage-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.usage-by-api h4,
+.top-users-usage h4,
+.user-usage-detail h4 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.api-usage-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-usage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.api-name {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.api-calls {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.api-cost {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.top-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.top-user-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.top-user-item:hover {
+  background: var(--bg-secondary);
+}
+
+.top-user-rank {
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 30px;
+}
+
+.top-user-email {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-user-cost {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.user-usage-detail {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+}
+
+.close-usage-detail {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.user-usage-by-api {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.user-api-item {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.user-recent-logs h5 {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.log-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.log-api {
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.log-details {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.log-cost {
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .usage-summary {
+    grid-template-columns: 1fr;
+  }
+}

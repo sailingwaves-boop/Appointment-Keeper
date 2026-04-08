@@ -1048,6 +1048,23 @@ You are now in coding mode. Help the user build whatever they need."""
         
         response_text = response.content[0].text
         
+        # Log API usage
+        input_tokens = response.usage.input_tokens if hasattr(response, 'usage') else 0
+        output_tokens = response.usage.output_tokens if hasattr(response, 'usage') else 0
+        # Approximate cost: Haiku ~$0.25/1M input, $1.25/1M output; Sonnet ~$3/1M input, $15/1M output
+        if request.app_builder_mode:
+            cost_cents = int((input_tokens * 0.003 + output_tokens * 0.015) * 100)  # Sonnet pricing
+        else:
+            cost_cents = int((input_tokens * 0.00025 + output_tokens * 0.00125) * 100)  # Haiku pricing
+        
+        await log_api_usage(
+            user_id=user_id,
+            api_name="anthropic",
+            tokens_used=input_tokens + output_tokens,
+            cost_cents=cost_cents,
+            details=f"model={model}, in={input_tokens}, out={output_tokens}"
+        )
+        
         # Save conversation to database
         now = datetime.now(timezone.utc).isoformat()
         conversation_doc = {
@@ -1246,6 +1263,18 @@ async def transcribe_voice(
         
         # Clean up temp file
         os.unlink(temp_path)
+        
+        # Log Whisper usage (approximately $0.006 per minute of audio)
+        audio_size_kb = len(audio_content) / 1024
+        est_duration_sec = audio_size_kb / 16  # rough estimate: 16KB per second of audio
+        cost_cents = max(1, int(est_duration_sec / 60 * 0.6))  # $0.006/min = 0.6 cents/min
+        await log_api_usage(
+            user_id=current_user["id"],
+            api_name="whisper",
+            tokens_used=0,
+            cost_cents=cost_cents,
+            details=f"duration_est={int(est_duration_sec)}s"
+        )
         
         return {"text": response.text}
     except Exception as e:
@@ -1523,6 +1552,125 @@ async def admin_get_web_search_status(admin: dict = Depends(require_admin)):
     """Get web search status (admin only)"""
     setting = await db.settings.find_one({"key": "web_search_enabled"}, {"_id": 0})
     return {"enabled": setting.get("value", False) if setting else False}
+
+# ============== API USAGE TRACKING ==============
+
+async def log_api_usage(user_id: str, api_name: str, tokens_used: int = 0, cost_cents: int = 0, details: str = ""):
+    """Log API usage for a user"""
+    await db.api_usage.insert_one({
+        "user_id": user_id,
+        "api_name": api_name,
+        "tokens_used": tokens_used,
+        "cost_cents": cost_cents,
+        "details": details,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    # Update user's total usage
+    await db.users.update_one(
+        {"id": user_id},
+        {"$inc": {
+            f"usage.{api_name}.tokens": tokens_used,
+            f"usage.{api_name}.cost_cents": cost_cents,
+            f"usage.{api_name}.calls": 1,
+            "usage.total_cost_cents": cost_cents
+        }}
+    )
+
+@api_router.get("/admin/usage")
+async def admin_get_usage_stats(admin: dict = Depends(require_admin)):
+    """Get API usage statistics"""
+    # Get total usage by API
+    pipeline = [
+        {"$group": {
+            "_id": "$api_name",
+            "total_tokens": {"$sum": "$tokens_used"},
+            "total_cost_cents": {"$sum": "$cost_cents"},
+            "total_calls": {"$sum": 1}
+        }}
+    ]
+    api_totals = await db.api_usage.aggregate(pipeline).to_list(100)
+    
+    # Get usage by user (top 10)
+    user_pipeline = [
+        {"$group": {
+            "_id": "$user_id",
+            "total_cost_cents": {"$sum": "$cost_cents"},
+            "total_calls": {"$sum": 1}
+        }},
+        {"$sort": {"total_cost_cents": -1}},
+        {"$limit": 10}
+    ]
+    top_users = await db.api_usage.aggregate(user_pipeline).to_list(10)
+    
+    # Enrich with user emails
+    for u in top_users:
+        user = await db.users.find_one({"id": u["_id"]}, {"_id": 0, "email": 1, "name": 1})
+        if user:
+            u["email"] = user.get("email", "Unknown")
+            u["name"] = user.get("name", "Unknown")
+    
+    # Get recent usage (last 24 hours)
+    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    recent_count = await db.api_usage.count_documents({"timestamp": {"$gte": yesterday}})
+    
+    # Calculate totals
+    total_cost = sum(a.get("total_cost_cents", 0) for a in api_totals)
+    total_calls = sum(a.get("total_calls", 0) for a in api_totals)
+    
+    return {
+        "by_api": {a["_id"]: {"tokens": a["total_tokens"], "cost_cents": a["total_cost_cents"], "calls": a["total_calls"]} for a in api_totals},
+        "top_users": top_users,
+        "total_cost_cents": total_cost,
+        "total_calls": total_calls,
+        "calls_last_24h": recent_count
+    }
+
+@api_router.get("/admin/usage/user/{user_id}")
+async def admin_get_user_usage(user_id: str, admin: dict = Depends(require_admin)):
+    """Get detailed usage for a specific user"""
+    # Get user's usage breakdown
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$group": {
+            "_id": "$api_name",
+            "total_tokens": {"$sum": "$tokens_used"},
+            "total_cost_cents": {"$sum": "$cost_cents"},
+            "total_calls": {"$sum": 1}
+        }}
+    ]
+    usage_by_api = await db.api_usage.aggregate(pipeline).to_list(100)
+    
+    # Get recent logs
+    recent_logs = await db.api_usage.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(20).to_list(20)
+    
+    return {
+        "by_api": {a["_id"]: {"tokens": a["total_tokens"], "cost_cents": a["total_cost_cents"], "calls": a["total_calls"]} for a in usage_by_api},
+        "recent_logs": recent_logs
+    }
+
+class UserLimitUpdate(BaseModel):
+    daily_limit_cents: Optional[int] = None
+    monthly_limit_cents: Optional[int] = None
+    is_throttled: Optional[bool] = None
+
+@api_router.post("/admin/usage/user/{user_id}/limits")
+async def admin_set_user_limits(user_id: str, data: UserLimitUpdate, admin: dict = Depends(require_admin)):
+    """Set usage limits for a user"""
+    update_data = {}
+    if data.daily_limit_cents is not None:
+        update_data["limits.daily_cents"] = data.daily_limit_cents
+    if data.monthly_limit_cents is not None:
+        update_data["limits.monthly_cents"] = data.monthly_limit_cents
+    if data.is_throttled is not None:
+        update_data["is_throttled"] = data.is_throttled
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    return {"message": "User limits updated"}
 
 @api_router.get("/settings/web-search-available")
 async def get_web_search_available(current_user: dict = Depends(get_current_user)):
@@ -1841,6 +1989,17 @@ async def text_to_speech(
         
         # Return as base64
         audio_base64 = base64.b64encode(audio_bytes).decode()
+        
+        # Log ElevenLabs TTS usage (approximately $0.30 per 1000 chars)
+        char_count = len(text)
+        cost_cents = max(1, int(char_count / 1000 * 30))  # $0.30/1000 chars
+        await log_api_usage(
+            user_id=current_user["id"],
+            api_name="elevenlabs_tts",
+            tokens_used=char_count,
+            cost_cents=cost_cents,
+            details=f"chars={char_count}"
+        )
         
         return {"audio": audio_base64, "content_type": "audio/mpeg"}
         
