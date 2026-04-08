@@ -848,8 +848,7 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   background: var(--bg-primary);
-  position: relative;
-  z-index: 1;
+  isolation: isolate;
 }
 
 .empty-chat {
@@ -895,9 +894,7 @@ body {
   gap: 1rem;
   max-width: 100%;
   width: 100%;
-  position: relative;
-  z-index: 2;
-  background: var(--bg-primary);
+  contain: layout style paint;
 }
 
 .message.user {
@@ -1716,12 +1713,19 @@ body {
     max-width: 100%;
     width: 100%;
     overflow-x: hidden;
+    contain: layout style paint;
+    background: var(--bg-primary);
   }
 
   .message-content {
     max-width: calc(100% - 45px);
     word-break: break-word;
     overflow-wrap: break-word;
+    background: var(--bg-secondary);
+  }
+  
+  .message.user .message-content {
+    background: var(--user-message);
   }
 
   .message-avatar {
