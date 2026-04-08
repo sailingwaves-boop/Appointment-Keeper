@@ -1496,9 +1496,11 @@ const ChatView = () => {
             <p>What would you like help with?</p>
           </div>
         ) : (
-          messages.map((msg, idx) => (
+          messages.map((msg, idx) => {
+            const uniqueKey = `${msg.role}-${idx}-${msg.content?.substring(0, 20) || ''}`;
+            return (
             <div 
-              key={idx} 
+              key={uniqueKey} 
               className={`message ${msg.role}`}
               data-testid={`message-${msg.role}-${idx}`}
             >
@@ -1549,7 +1551,8 @@ const ChatView = () => {
                 )}
               </div>
             </div>
-          ))
+          );
+          })
         )}
         {sending && (
           <div className="message assistant">

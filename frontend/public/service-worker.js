@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chronicle-v6';
+const CACHE_NAME = 'chronicle-v7';
 const urlsToCache = [
   '/',
   '/index.html'
