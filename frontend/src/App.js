@@ -3628,10 +3628,10 @@ const Dashboard = () => {
       </aside>
 
       {/* Open/Close toggle indicators - outside sidebar */}
-      <div className={`sidebar-toggle-indicators ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <span className="toggle-close" title="Close" onClick={() => setSidebarCollapsed(true)}>−</span>
+      <div className={`sidebar-toggle-indicators ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'mobile-visible' : ''}`}>
+        <span className="toggle-close" title="Close" onClick={() => { setSidebarCollapsed(true); setSidebarOpen(false); }}>−</span>
         <span className="toggle-divider">|</span>
-        <span className="toggle-open" title="Open" onClick={() => setSidebarCollapsed(false)}>+</span>
+        <span className="toggle-open" title="Open" onClick={() => { setSidebarCollapsed(false); setSidebarOpen(true); }}>+</span>
       </div>
 
       {/* Overlay to close sidebar when clicking outside */}

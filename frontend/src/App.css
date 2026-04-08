@@ -3846,7 +3846,7 @@ html {
   top: 50%;
   left: 220px;
   transform: translateY(-50%);
-  display: none;
+  display: flex;
   align-items: center;
   gap: 2px;
   font-size: 20px;
@@ -3864,9 +3864,18 @@ html {
   left: 0;
 }
 
-@media (min-width: 769px) {
+@media (max-width: 768px) {
   .sidebar-toggle-indicators {
+    display: none;
+  }
+  
+  .sidebar-toggle-indicators.mobile-visible {
     display: flex;
+    left: 220px;
+  }
+  
+  .sidebar-toggle-indicators.mobile-visible.collapsed {
+    left: 0;
   }
 }
 
