@@ -523,7 +523,7 @@ body {
 }
 
 .mobile-menu-btn {
-  display: flex;
+  display: none;
   position: fixed;
   top: 1rem;
   left: 1rem;
@@ -534,11 +534,12 @@ body {
   border-radius: 8px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: left 0.3s ease;
 }
 
-.mobile-menu-btn.sidebar-visible {
-  left: 232px;
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
 }
 
 /* Sidebar */
@@ -3619,6 +3620,27 @@ body {
   z-index: 100;
 }
 
+.file-commands-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.file-commands-close:hover {
+  background: var(--accent);
+  color: white;
+}
+
 .file-command-item {
   display: block;
   width: 100%;
@@ -3816,6 +3838,67 @@ html {
   .sidebar.collapsed .sidebar-close-btn svg {
     transform: rotate(180deg);
   }
+}
+
+/* Sidebar toggle indicators - | + */
+.sidebar-toggle-indicators {
+  position: fixed;
+  top: 50%;
+  left: 220px;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  gap: 2px;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 1002;
+  background: var(--bg-secondary);
+  padding: 8px 6px;
+  border-radius: 0 8px 8px 0;
+  border: 1px solid var(--border);
+  border-left: none;
+  transition: left 0.3s ease;
+}
+
+.sidebar-toggle-indicators.collapsed {
+  left: 0;
+}
+
+@media (min-width: 769px) {
+  .sidebar-toggle-indicators {
+    display: flex;
+  }
+}
+
+.toggle-close {
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.toggle-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.toggle-divider {
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.toggle-open {
+  color: #22c55e;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.toggle-open:hover {
+  background: rgba(34, 197, 94, 0.2);
 }
 
 /* Sidebar overlay - click to close on mobile */

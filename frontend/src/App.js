@@ -1613,6 +1613,13 @@ const ChatView = () => {
           </button>
           {showFileCommands && (
             <div className="file-commands-dropdown">
+              <button 
+                type="button" 
+                className="file-commands-close"
+                onClick={() => setShowFileCommands(false)}
+              >
+                <ChevronLeft size={18} />
+              </button>
               {fileCommands.map((cmd, idx) => (
                 <button
                   key={idx}
@@ -3524,11 +3531,11 @@ const Dashboard = () => {
         </div>
       )}
       <button 
-        className={`mobile-menu-btn ${!sidebarCollapsed ? 'sidebar-visible' : ''}`}
+        className="mobile-menu-btn"
         onClick={toggleSidebar}
         data-testid="mobile-menu-btn"
       >
-        {(sidebarOpen || !sidebarCollapsed) ? <X size={24} /> : <Menu size={24} />}
+        <Menu size={24} />
       </button>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
@@ -3539,6 +3546,7 @@ const Dashboard = () => {
         >
           <ChevronLeft size={24} />
         </button>
+        
         <div className="sidebar-header">
           <Brain size={32} />
           <h1>Chronicle</h1>
@@ -3618,6 +3626,13 @@ const Dashboard = () => {
           Chronicle - The AI that never forgets © 2026 Useful Gadgets Ltd
         </div>
       </aside>
+
+      {/* Open/Close toggle indicators - outside sidebar */}
+      <div className={`sidebar-toggle-indicators ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        <span className="toggle-close" title="Close" onClick={() => setSidebarCollapsed(true)}>−</span>
+        <span className="toggle-divider">|</span>
+        <span className="toggle-open" title="Open" onClick={() => setSidebarCollapsed(false)}>+</span>
+      </div>
 
       {/* Overlay to close sidebar when clicking outside */}
       {sidebarOpen && (
