@@ -1790,7 +1790,7 @@ body {
     flex-wrap: nowrap;
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .chat-input-form input[type="text"] {
@@ -3617,7 +3617,7 @@ body {
   padding: 8px 0;
   min-width: 160px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  z-index: 100;
+  z-index: 2000;
 }
 
 .file-commands-close {
