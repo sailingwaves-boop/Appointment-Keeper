@@ -3951,7 +3951,7 @@ html {
 
 @media (max-width: 768px) {
   .sidebar-overlay {
-    left: 0;
+    left: 220px;
     background: rgba(0, 0, 0, 0.5);
   }
 }
