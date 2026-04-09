@@ -3615,6 +3615,7 @@ const Dashboard = () => {
         <nav className="sidebar-nav">
           <button
             className={activeView === 'chat' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('chat'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('chat'); setSidebarOpen(false); }}
             data-testid="nav-chat"
           >
@@ -3623,6 +3624,7 @@ const Dashboard = () => {
           </button>
           <button
             className={activeView === 'phone' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('phone'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('phone'); setSidebarOpen(false); }}
             data-testid="nav-phone"
           >
@@ -3631,6 +3633,7 @@ const Dashboard = () => {
           </button>
           <button
             className={activeView === 'contacts' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('contacts'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('contacts'); setSidebarOpen(false); }}
             data-testid="nav-contacts"
           >
@@ -3639,6 +3642,7 @@ const Dashboard = () => {
           </button>
           <button
             className={activeView === 'memory' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('memory'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('memory'); setSidebarOpen(false); }}
             data-testid="nav-memory"
           >
@@ -3647,6 +3651,7 @@ const Dashboard = () => {
           </button>
           <button
             className={activeView === 'subscription' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('subscription'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('subscription'); setSidebarOpen(false); }}
             data-testid="nav-subscription"
           >
@@ -3655,6 +3660,7 @@ const Dashboard = () => {
           </button>
           <button
             className={activeView === 'settings' ? 'active' : ''}
+            onTouchEnd={(e) => { e.preventDefault(); setActiveView('settings'); setSidebarOpen(false); }}
             onClick={() => { setActiveView('settings'); setSidebarOpen(false); }}
             data-testid="nav-settings"
           >
@@ -3664,6 +3670,7 @@ const Dashboard = () => {
           {user?.email === 'sailingwaves@gmail.com' && (
             <button
               className={activeView === 'admin' ? 'active' : ''}
+              onTouchEnd={(e) => { e.preventDefault(); setActiveView('admin'); setSidebarOpen(false); }}
               onClick={() => { setActiveView('admin'); setSidebarOpen(false); }}
               data-testid="nav-admin"
             >
